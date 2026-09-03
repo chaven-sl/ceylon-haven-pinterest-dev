@@ -1,8 +1,8 @@
-# Phase 2.4 Handoff - Ready for Test Execution
+# Phase 2.4 Revised - Cloud Development Ready
 
-**Status:** Phase 2.4 structure complete and verified  
-**Date:** 2026-09-03 16:35 UTC  
-**Completion:** ~95% (code 100%, tests ready, awaiting Docker)
+**Status:** Phase 2.4 Revised complete; ready for cloud integration testing  
+**Date:** 2026-09-03 16:45 UTC  
+**Completion:** 100% (code, tests, documentation; awaiting user Supabase dev project)
 
 ---
 
@@ -15,7 +15,7 @@
 - Changed from raw PostgreSQL to Supabase HTTP API
 - Added three-layer safety guards (fail-closed)
 - Tests now use correct client initialization
-- All 29 integration tests ready to execute
+- All 32 integration tests (29 core + 3 RLS/security) ready to execute
 
 **2. Environment Variables Corrected**
 - Old: `TEST_DATABASE_URL=postgresql://localhost:5432/...`
@@ -91,48 +91,47 @@
 
 ## How to Proceed (User Action)
 
-### Step 1: Install Docker (5 minutes)
+### Step 1: Create Supabase Development Project (5 minutes)
 
-**macOS:**
-1. Go to https://www.docker.com/products/docker-desktop
-2. Download Docker Desktop
-3. Run installer and follow prompts
-4. Start Docker.app from Applications
+1. Go to https://supabase.com/dashboard
+2. Create new project:
+   - Organization: your account
+   - Project name: `ceylon-haven-pinterest-dev`
+   - Region: closest to Asia/Colombo (e.g., Singapore)
+   - Database password: strong random
+3. Wait for initialization (~2 min)
+4. Save credentials:
+   - Project URL: `https://[project-ref].supabase.co`
+   - Anon key (public): `eyJ0eXAi...`
+   - Service role key (secret): `eyJ0eXAi...`
 
-**Linux:**
-```bash
-sudo apt-get update
-sudo apt-get install docker.io
-sudo systemctl start docker
+### Step 2: Apply Migrations (2 minutes)
+
+In Supabase Studio (SQL Editor):
+1. Paste contents of `db/migrations/0001_init_schema.sql` → Run
+2. Paste contents of `db/migrations/0002_atomic_operations.sql` → Run
+
+Verify tables and functions created:
+- ✓ facebook_posts
+- ✓ pinterest_pins
+- ✓ execution_logs
+- ✓ 6 RPC functions (with service-role privileges)
+
+### Step 3: Configure Credentials (2 minutes)
+
+Create `.env.test` in project root:
+```
+NODE_ENV=test
+ALLOW_REMOTE_TEST_DATABASE=true
+TEST_SUPABASE_URL=https://[your-project].supabase.co
+TEST_SUPABASE_ANON_KEY=[your-anon-key]
+TEST_SUPABASE_SERVICE_ROLE_KEY=[your-service-role-key]
+TEST_SUPABASE_PROJECT_REF=[your-project-ref]
 ```
 
-**Windows:**
-1. Download Docker Desktop
-2. Run installer
-3. Start Docker Desktop from Start Menu
+Ensure `.env.test` is in `.gitignore` (it is by default).
 
-**Verify:**
-```bash
-docker --version
-# Should show: Docker version 27.x.x or newer
-```
-
-### Step 2: Setup Supabase (2-5 minutes)
-
-```bash
-cd /Users/dilshanrabbie/Desktop/Ceylon-Haven-Pinterest-Automation
-bash scripts/setup-test-db.sh
-```
-
-This will:
-- Start local Supabase with Docker
-- Apply database migrations
-- Extract test credentials
-- Create `.env.test` file
-
-Expected: "✓ Setup complete!" message
-
-### Step 3: Run Integration Tests (1 minute)
+### Step 4: Run Integration Tests (1 minute)
 
 ```bash
 source .env.test
@@ -141,7 +140,7 @@ npm run test:integration:db
 
 Expected output:
 ```
-✓ Supabase API Integration Tests (Local HTTP API)
+✓ Supabase API Integration Tests (Cloud HTTP API)
   ✓ Schema Validation (4 tests)
   ✓ claim_for_publishing (4 tests)
   ✓ record_published_pin (5 tests)
@@ -150,11 +149,12 @@ Expected output:
   ✓ State protection (9 tests)
   ✓ markPostUncertain (2 tests)
   ✓ markPostSkipped (2 tests)
+  ✓ RLS & Security Validation (3 tests)
 
-✓ 29 passed, 0 failed, 0 skipped
+✓ 32 passed, 0 failed, 0 skipped
 ```
 
-### Step 4: Verify Full Validation (5 minutes)
+### Step 5: Verify Full Validation (5 minutes)
 
 ```bash
 npm install
@@ -162,7 +162,7 @@ npm audit
 npm run type-check
 npm run lint
 npm test              # Unit + mock tests
-npm run test:integration:db  # Integration tests
+npm run test:integration:db  # Integration tests (cloud Supabase)
 npm run build
 ```
 
@@ -170,10 +170,10 @@ npm run build
 
 ## What Will Be Ready After Tests Pass
 
-✓ All 29 integration tests passing  
-✓ Zero skipped tests (proof of real local Supabase)  
-✓ Production parity confirmed (uses actual API layer)  
-✓ Phase 3 ready for real API integration
+✓ All 32 integration tests implemented (29 core + 3 RLS/security)  
+✓ Zero skipped tests expected (when Supabase dev project configured)  
+✓ Production parity confirmed (uses actual Supabase API layer)  
+✓ Phase 3 ready for real API integration (after tests pass)
 
 ---
 
@@ -222,7 +222,7 @@ This is CORRECT because:
 ### Why It Matters
 - **Before:** Tests connected to bare PostgreSQL
 - **After:** Tests connect to full Supabase stack (like production)
-- **Proof:** All 29 tests pass with 0 skipped
+- **When ready:** All 32 tests will pass with 0 skipped (after Supabase dev project created)
 
 ---
 
@@ -256,7 +256,7 @@ See **TEST_SETUP_GUIDE.md** for complete troubleshooting section.
 
 ## After Tests Pass: Phase 3
 
-Once all 29 integration tests pass with 0 skipped, you're ready for Phase 3:
+Once all 32 integration tests pass with 0 skipped, you're ready for Phase 3:
 
 1. **Real Facebook Graph API Integration**
    - Fetch actual posts from Ceylon Haven page
@@ -339,26 +339,27 @@ npm run test:integration:db
 
 ## Summary
 
-**Phase 2.4:** Fixed incorrect Supabase integration (raw PostgreSQL → HTTP API)
+**Phase 2.4 Revised:** Migrated from Docker-based testing to cloud development (GitHub → Vercel → Supabase dev)
 
-**Status:** Code complete, awaiting Docker for test execution
+**Status:** Code complete, tests ready to execute (awaiting user Supabase dev project creation)
 
 **Timeline:**
-1. Install Docker (5 min)
-2. Run setup (2-5 min)
-3. Run tests (1 min)
-4. Validate (5 min)
-5. Ready for Phase 3 ✓
+1. Create Supabase dev project (5 min)
+2. Apply migrations (2 min)
+3. Configure credentials (2 min)
+4. Run tests (1 min)
+5. Validate (5 min)
+6. Ready for Phase 3 ✓
 
-**Total time:** ~15-20 minutes
+**Total time:** ~15 minutes
 
 ---
 
 ## Next: Phase 3 Prerequisites
 
 Before starting Phase 3, you'll need:
-- [ ] Docker installed and verified
-- [ ] All 29 tests passing (0 skipped)
+- [ ] Supabase development project created
+- [ ] All 32 tests passing (0 skipped)
 - [ ] Full validation suite passing
 - [ ] Supabase project created on supabase.com
 - [ ] Vercel project created
@@ -382,9 +383,10 @@ Refer to:
 
 ## Ready?
 
-1. **Install Docker** ← Start here
-2. Run setup script
-3. Run tests
-4. Celebrate ✓
+1. **Create Supabase dev project** ← Start here
+2. Apply migrations
+3. Configure .env.test
+4. Run tests
+5. Celebrate ✓
 
-Phase 2.4 is structure-complete. You've got everything needed except Docker. Let's go!
+Phase 2.4 Revised is complete. You've got everything needed. Go create that Supabase dev project and run the tests!
