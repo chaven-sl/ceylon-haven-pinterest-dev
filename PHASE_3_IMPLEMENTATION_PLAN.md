@@ -128,11 +128,11 @@
 
 ### Version & Endpoints
 - Current: Meta Graph API v26 (configured in .env.example)
-- Page feed retrieval: GET /{PAGE_ID}/feed endpoint
+- Page feed retrieval: GET /{PAGE_ID}/posts endpoint (recommended for page-only content)
 - Required permissions: 
   - `pages_read_engagement` (read post engagement metrics)
   - `pages_read_user_content` (read Facebook Page content)
-  - `manage_pages` (full page access; not strictly required for read-only)
+  - **DO NOT use `manage_pages` (deprecated)**
 
 ### Media Retrieval
 - Endpoint: GET /{POST_ID}/attachments (retrieves media metadata)
@@ -246,7 +246,7 @@ However, the following non-blocking improvements are recommended:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Vercel Cron Job (daily)                      │
-│                   06:30 UTC (12:00 PM AST)                      │
+│                   06:30 UTC (12:00 PM Asia/Colombo)             │
 └──────────────────────────┬──────────────────────────────────────┘
                            │
                            ↓
@@ -467,36 +467,47 @@ Facebook Page Access Token
        ├─ Check validity: GET /me endpoint at runtime
        └─→ Use for all Facebook API calls
 
-Pinterest OAuth Token Management
-   └─→ [Environment variables: PINTEREST_ACCESS_TOKEN, PINTEREST_REFRESH_TOKEN]
-       ├─ Initial authorization: User completes OAuth flow
-       ├─ Tokens stored securely in Vercel (never in repo)
-       └─→ Implement refresh cycle below
+Pinterest OAuth Token Management (CORRECTED ARCHITECTURE)
+   └─→ [Vercel deployment-level secrets (set once)]
+       ├─ PINTEREST_APP_ID (plaintext)
+       ├─ PINTEREST_APP_SECRET (secured)
+       └─ TOKEN_ENCRYPTION_KEY (32-byte random, base64-encoded)
+   
+   └─→ [Supabase runtime storage (mutable per execution)]
+       ├─ access_token_encrypted (libsodium AES-256-secretbox)
+       ├─ refresh_token_encrypted (libsodium AES-256-secretbox)
+       ├─ access_token_expires_at (TIMESTAMPTZ)
+       ├─ refresh_token_expires_at (TIMESTAMPTZ)
+       └─ last_refreshed_at (TIMESTAMPTZ)
 
 
 REFRESH CYCLE (30-Day Window)
 ────────────────────────────────────────────
 
 At daily run start:
-1. Check PINTEREST_ACCESS_TOKEN expiration time
-2. If <7 days to expiration:
-   └─→ POST /oauth/token/refresh
-       ├─ Send: PINTEREST_APP_ID, PINTEREST_APP_SECRET, PINTEREST_REFRESH_TOKEN
+1. Read encrypted tokens from Supabase (pinterest_oauth_tokens table)
+2. Check access_token_expires_at
+3. If <24 hours to expiration:
+   └─→ POST /v5/oauth/token endpoint
+       ├─ Send: grant_type=refresh_token, refresh_token, client_id, client_secret
        ├─ Receive: new access_token, new refresh_token, expires_in
-       ├─ Store: Update Vercel environment variables
-       └─→ Log: token_refreshed_at in execution_logs
+       ├─ Encrypt new tokens in Node.js (libsodium)
+       ├─ Call Supabase RPC: refresh_pinterest_token(encrypted_access, encrypted_refresh, expires_at)
+       └─→ Atomic update ensures consistency
 
 If refresh fails:
    ├─ Log error (non-fatal)
    ├─ Attempt to continue with existing token
    └─→ If existing token also invalid, execution fails with auth error
 
+**NOTE:** Tokens stored encrypted in Supabase, never as plaintext in environment variables
+
 
 USAGE (API Calls)
 ────────────────────────────────────────────
 
 Facebook API
-   └─→ Authorization: GET /page_id/feed?access_token={FACEBOOK_ACCESS_TOKEN}
+   └─→ Authorization: GET /v26.0/{page_id}/posts?access_token={FACEBOOK_ACCESS_TOKEN}
        ├─ No token refresh needed (long-lived, once-daily)
        └─→ If 401: token expired, requires manual renewal
 
@@ -539,9 +550,11 @@ ROTATION STRATEGY (Recommended Annual)
 
 For Pinterest:
 1. Re-authenticate user (complete OAuth flow)
-2. Store new access/refresh tokens
-3. Test: create sample pin to verify access
-4. Update PINTEREST_ACCESS_TOKEN and PINTEREST_REFRESH_TOKEN in Vercel
+2. Encrypt new access/refresh tokens in Node.js
+3. Store encrypted tokens in Supabase (pinterest_oauth_tokens table)
+4. Test: create sample pin to verify access
+5. Verify token refresh works via RPC function
+6. Note: No Vercel environment variable updates needed (credentials stored in Supabase)
 ```
 
 ---
@@ -549,40 +562,37 @@ For Pinterest:
 ## Section 10: Board Routing Architecture
 
 ```
-CONFIGURABLE BOARD ROUTING (Not Hard-Coded)
+BOARD ROUTING CONFIGURATION (Supabase Table)
 ──────────────────────────────────────────────
 
-Configuration Source Options (Choose One):
+Configuration Source: Supabase board_routing_config table (CORRECTED ARCHITECTURE)
 
-OPTION A: Supabase Configuration Table (Recommended)
-  └─→ Table: property_board_mapping
+Schema:
+  └─→ Table: board_routing_config
       ├─ Columns:
-      │  ├─ property_name VARCHAR (e.g., "The Beach Home")
-      │  ├─ board_id VARCHAR (Pinterest board ID)
-      │  ├─ board_name VARCHAR (Pinterest board name, for UI)
-      │  ├─ is_active BOOLEAN (enable/disable routing)
-      │  └─ created_at / updated_at
+      │  ├─ id SERIAL PRIMARY KEY
+      │  ├─ property_id TEXT UNIQUE (e.g., "ceylon-haven-beach-home")
+      │  ├─ property_name TEXT (e.g., "The Beach Home")
+      │  ├─ property_type TEXT (e.g., "villa", "beach", "boutique")
+      │  ├─ pinterest_board_id TEXT (Pinterest board ID)
+      │  ├─ pinterest_board_name TEXT (Pinterest board name)
+      │  ├─ destination_url TEXT (property landing page URL)
+      │  ├─ active BOOLEAN DEFAULT TRUE
+      │  ├─ created_at TIMESTAMPTZ
+      │  └─ updated_at TIMESTAMPTZ
       │
       └─ Usage:
-          ├─ At run start: Load all active mappings
-          ├─ For each post: Extract property name
-          ├─ Query mapping table: SELECT board_id WHERE property_name = X
-          └─→ Use board_id for pin creation
+          ├─ At run start: Load all active mappings from Supabase
+          ├─ For each post: Extract property name from caption
+          ├─ Query table: SELECT pinterest_board_id, destination_url WHERE property_id = X
+          └─→ Use board_id and URL for pin creation
 
-
-OPTION B: Environment Variable (Simpler, Less Flexible)
-  └─→ JSON environment variable: BOARD_ROUTING_CONFIG
-      ├─ Value: JSON object
-      ├─ Example:
-      │  {
-      │    "The Beach Home": "pinterest_board_id_123",
-      │    "Colombo Heritage": "pinterest_board_id_456"
-      │  }
-      │
-      └─ Usage:
-          ├─ Load at run start: JSON.parse(process.env.BOARD_ROUTING_CONFIG)
-          ├─ For each post: routing[propertyName]
-          └─→ Use board_id for pin creation
+Advantages:
+  ├─ Easy to modify board mappings without code deployment
+  ├─ Add new properties without releasing new version
+  ├─ Disable properties without code changes
+  ├─ All data persists between executions
+  └─ Access controlled via Supabase RLS
 
 
 PROPERTY EXTRACTION
@@ -1202,18 +1212,22 @@ Planned metrics display:
 CREDENTIAL ISOLATION
 ──────────────────────────────────────────────
 
-Environment Variables (Vercel):
+Environment Variables (Vercel - Deployment-Level):
   ├─ FACEBOOK_ACCESS_TOKEN
   │  └─ Scope: Read Ceylon Haven page posts
   │  └─ Exposure: Never in client-side code
   │
-  ├─ PINTEREST_ACCESS_TOKEN
-  │  └─ Scope: Create pins on authorized boards
+  ├─ PINTEREST_APP_ID (CORRECTED ARCHITECTURE)
+  │  └─ Scope: OAuth app identification
   │  └─ Exposure: Never in client-side code
   │
-  ├─ PINTEREST_REFRESH_TOKEN
-  │  └─ Scope: Refresh access token
-  │  └─ Exposure: Never in client-side code
+  ├─ PINTEREST_APP_SECRET (CORRECTED ARCHITECTURE)
+  │  └─ Scope: OAuth app secret
+  │  └─ Exposure: Never in client-side code, never in logs
+  │
+  ├─ TOKEN_ENCRYPTION_KEY (CORRECTED ARCHITECTURE)
+  │  └─ Scope: Encrypt/decrypt Pinterest tokens in Supabase
+  │  └─ Exposure: Never in client-side code, never in logs
   │
   ├─ SUPABASE_SERVICE_ROLE_KEY
   │  └─ Scope: Full database access (backend only)
@@ -1226,6 +1240,17 @@ Environment Variables (Vercel):
   └─ SUPABASE_ANON_KEY
      └─ Scope: Limited public access (RLS enforced)
      └─ Exposure: Safe to expose in client-side code
+
+Supabase Runtime Storage (Encrypted):
+  ├─ pinterest_oauth_tokens.access_token_encrypted
+  │  └─ Scope: Create pins on Pinterest
+  │  └─ Storage: Supabase table (encrypted with libsodium)
+  │  └─ Exposure: Never in plaintext, only in memory during execution
+  │
+  └─ pinterest_oauth_tokens.refresh_token_encrypted
+     └─ Scope: Refresh access token (30-day cycle)
+     └─ Storage: Supabase table (encrypted with libsodium)
+     └─ Exposure: Never in plaintext, only in memory during execution
 
 Development Isolation:
   ├─ .env.test: Test credentials (local, cloud dev Supabase)
@@ -1250,13 +1275,14 @@ Facebook Page Access Token:
   5. Remove old token from dashboard
   6. Monitor execution logs for successful API calls
 
-Pinterest Tokens (requires user re-auth):
+Pinterest Tokens (requires user re-auth, CORRECTED ARCHITECTURE):
   1. Complete OAuth flow (user logs in)
   2. Capture new access_token and refresh_token
-  3. Update PINTEREST_ACCESS_TOKEN in Vercel
-  4. Update PINTEREST_REFRESH_TOKEN in Vercel (secured)
+  3. Encrypt tokens in Node.js using TOKEN_ENCRYPTION_KEY
+  4. Store encrypted tokens in Supabase (pinterest_oauth_tokens table via RPC)
   5. Test: Create sample pin to verify access
-  6. Notify user that refresh was successful
+  6. Verify automatic token refresh works on next cron run
+  7. No Vercel environment variable updates needed (credentials in Supabase)
 
 Supabase Service Role Key:
   1. Log into Supabase dashboard
@@ -1641,25 +1667,26 @@ PRODUCTION VERCEL SETUP
    ├─ Link to GitHub repository (recommended)
    └─ Enable auto-deploy on main branch push
 
-2. Environment Variables
+2. Environment Variables (CORRECTED ARCHITECTURE)
    ├─ Vercel Dashboard → Project Settings → Environment Variables
    ├─ Add variables for production:
    │  ├─ FACEBOOK_ACCESS_TOKEN (production page token)
-   │  ├─ PINTEREST_ACCESS_TOKEN (production app token)
-   │  ├─ PINTEREST_REFRESH_TOKEN (production app token)
+   │  ├─ PINTEREST_APP_ID (production app ID)
+   │  ├─ PINTEREST_APP_SECRET (production app secret - secured)
+   │  ├─ TOKEN_ENCRYPTION_KEY (32-byte random, base64-encoded)
    │  ├─ SUPABASE_URL (production project URL)
    │  ├─ SUPABASE_ANON_KEY (production anon key)
-   │  ├─ SUPABASE_SERVICE_ROLE_KEY (production service role)
+   │  ├─ SUPABASE_SERVICE_ROLE_KEY (production service role - secured)
    │  ├─ CRON_SECRET (random 32-byte hex string)
    │  ├─ NODE_ENV=production
    │  └─ LOG_LEVEL=info
    │
-   └─ Note: Do NOT use test values
+   └─ Note: Pinterest tokens stored in Supabase, not Vercel. Do NOT use test values
 
 3. Vercel Cron Configuration
    ├─ vercel.json contains:
    │  └─ Cron job: POST /api/cron/facebook-pinterest
-   │               Schedule: "30 6 * * *" (06:30 UTC = 12:00 PM AST)
+   │               Schedule: "30 6 * * *" (06:30 UTC = 12:00 PM Asia/Colombo)
    │
    └─ Deploy → Cron automatically enabled
 
@@ -1721,17 +1748,18 @@ Facebook Page Access Token (Long-lived):
   ├─ Add: Facebook Login product
   ├─ Navigate to App Roles → Test Users
   ├─ Create or select test user (or use your account)
-  ├─ Grant: manage_pages, pages_read_engagement, pages_read_user_content
+  ├─ Grant permissions: pages_read_engagement, pages_read_user_content (DO NOT use manage_pages - deprecated)
   ├─ Tools → Graph Explorer → Select app and test user
   ├─ Run: GET /me/accounts
   ├─ Copy: Page Access Token (long-lived, valid ~60+ days)
   ├─ Add to Vercel: FACEBOOK_ACCESS_TOKEN
-  └─ Note: Refresh every 90 days (manual process in Meta dashboard)
+  └─ Note: Data Access permissions refresh every 90 days (manual process in Meta dashboard)
 
-Pinterest OAuth Setup (Requires User Interaction):
+Pinterest OAuth Setup (Requires User Interaction, CORRECTED ARCHITECTURE):
   ├─ Navigate to developers.pinterest.com
   ├─ Create or select Pinterest app
   ├─ Configure: OAuth Redirect URI = https://[project].vercel.app/api/oauth/callback
+  ├─ Configure scopes: pins:create, boards:read, pins:read
   ├─ User must authorize app:
   │  ├─ POST to: https://api.pinterest.com/oauth/
   │  ├─ User logs in and approves
@@ -1742,9 +1770,12 @@ Pinterest OAuth Setup (Requires User Interaction):
   │  ├─ access_token (30-day expiration)
   │  └─ refresh_token (60-day rolling)
   │
-  └─ Add to Vercel:
-     ├─ PINTEREST_ACCESS_TOKEN
-     └─ PINTEREST_REFRESH_TOKEN
+  ├─ Encrypt tokens in Node.js using TOKEN_ENCRYPTION_KEY
+  │
+  └─ Store encrypted tokens in Supabase (pinterest_oauth_tokens table via RPC)
+     ├─ DO NOT add plaintext tokens to Vercel
+     ├─ Access via Supabase on each cron execution
+     └─ Token refresh automatic (checked at run start, updated to Supabase)
 
 CRON_SECRET Generation:
   ├─ Local: openssl rand -hex 32

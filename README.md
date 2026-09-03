@@ -2,8 +2,9 @@
 
 Automatic social media distribution: republish Ceylon Haven Facebook posts to Pinterest with zero manual intervention.
 
-**Status:** Phase 2.4 Revised Complete ✓ (Cloud Development Environment Complete - 32/32 Integration Tests Passed)  
-**Next Step:** Phase 3 - Real Facebook & Pinterest API Integration (see [PHASE_3_IMPLEMENTATION_PLAN.md](PHASE_3_IMPLEMENTATION_PLAN.md))
+**Status:** ✓ Phase 3 Ready for Implementation  
+**Latest Completion:** Phase 3 Pre-Flight Verification Complete (2026-09-03)  
+**Next Step:** Provide user credentials and start Phase 3 implementation (see [PHASE_3_CORRECTION_REPORT.md](PHASE_3_CORRECTION_REPORT.md))
 
 ---
 
@@ -116,43 +117,39 @@ You will need:
 
 See [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md) for step-by-step instructions.
 
-### Setup (Immediate)
+### Current Status (Phase 3 Ready)
 
-```bash
-# 1. Create .env.test with Supabase credentials
-cp .env.test.example .env.test
-# Edit .env.test with your values (see DEVELOPMENT_SETUP.md Part 2)
+**✓ ALL TESTING COMPLETE:**
+- ✓ 32/32 integration tests PASSED against cloud Supabase (Sep 3, 2026)
+- ✓ 83 unit/mock tests PASSED
+- ✓ 115 total tests passing
+- ✓ Zero Docker requirements (used cloud Supabase instead)
+- ✓ No pending setup steps or blockers
 
-# 2. Install dependencies
-npm install
-
-# 3. Run integration tests against cloud Supabase
-source .env.test
-npm run test:integration:db
-
-# Expected: ✓ 32 tests pass (29 core + 3 RLS/security)
-```
-
-### What's Ready
+**✓ What's Ready**
 
 - ✓ Application source code (app/, db/, lib/, services/)
-- ✓ Database migrations (Supabase SQL)
-- ✓ 32 integration tests PASSED (29 core + 3 RLS/security)
+- ✓ Database schema & migrations (2 SQL migrations applied)
+- ✓ 32/32 cloud integration tests PASSED
 - ✓ 83 unit/mock tests PASSED
 - ✓ RPC functions (atomic state machine)
 - ✓ GitHub repository initialized
-- ✓ TypeScript + ESLint + Prettier configured
+- ✓ TypeScript strict mode + ESLint validation
 - ✓ Row-Level Security validated and tested
-- ✓ Production-ready architecture proven with cloud Supabase
+- ✓ Production-ready architecture proven
 
-### What's NOT Ready Yet (Phase 3+)
+### Phase 3 Blockers (User Action Required)
 
-- Real Facebook credentials (Phase 3)
-- Real Pinterest credentials (Phase 3)
-- Production Supabase project (Phase 3)
-- Production Vercel deployment (Phase 3)
+Before Phase 3 implementation begins, user must provide:
 
-**Docker is NOT required.** Development uses cloud Supabase (free tier).
+1. **Facebook Page ID** (5 minutes) — Ceylon Haven page ID
+2. **Pinterest Business Account** (2 minutes) — Verify or create
+3. **Pinterest App Credentials** (25 minutes) — App ID + Client Secret
+4. **Meta App Credentials** (optional, 10 minutes) — May already exist
+
+See [PHASE_3_CORRECTION_REPORT.md](PHASE_3_CORRECTION_REPORT.md) Section 12 for detailed user action plan.
+
+**No Docker required.** Phase 2.4 used cloud Supabase. Phase 3 uses production Supabase + real APIs.
 
 ---
 
@@ -280,39 +277,44 @@ Ceylon-Haven-Pinterest-Automation/
 
 ---
 
-## Next Steps
+## Next Steps (Phase 3 Ready)
 
-### Immediate (You)
-1. Read [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md) (Part 1-3)
-2. Create Supabase development project (free tier, ~5 min)
-3. Apply database migrations to dev project (~2 min)
-4. Configure .env.test with credentials (~2 min)
-5. Run tests: `source .env.test && npm run test:integration:db` (~30 sec)
-6. Verify: All 29 tests pass
+### Immediate (You - 30 minutes)
+1. **Read:** [PHASE_3_CORRECTION_REPORT.md](PHASE_3_CORRECTION_REPORT.md) (executive summary)
+2. **Collect Credentials:** Section 12 lists what's needed (Facebook Page ID, Pinterest App credentials)
+3. **Verify:** Pinterest Business Account exists (free tier)
+4. **Share with Developer:** Facebook Page ID + Pinterest credentials securely
 
-### Phase 3 Preparation
-- Real Facebook Graph API integration
-- Real Pinterest API integration
-- Production Supabase project setup
-- Production Vercel deployment
-- Real credentials management
+**All Phase 2 testing already complete** — no setup needed, codebase ready.
+
+### Phase 3 Implementation (Developer)
+1. Integrate Facebook Graph API v26 (verified working)
+2. Integrate Pinterest API v5 (verified working)
+3. Implement token persistence (Supabase encrypted storage)
+4. Deploy to production Vercel + Supabase
+5. First production run (manual trigger)
 
 ### Timeline
-- **Phase 1:** Complete (architecture + research)
-- **Phase 2:** Complete (codebase + database)
-- **Phase 2.4 Revised:** Complete (cloud dev environment)
-- **Phase 3:** API integration (~2-3 sessions)
+- **Phase 1:** ✓ Complete (architecture + research)
+- **Phase 2:** ✓ Complete (codebase + database)
+- **Phase 2.4:** ✓ Complete (cloud testing - 32/32 tests passed)
+- **Phase 3 Pre-Flight:** ✓ Complete (API verification + corrections)
+- **Phase 3:** Ready (awaiting user credentials)
 - **Phase 4 (Optional):** Content adaptation + AI
 
 ---
 
 ## Support & Questions
 
-If questions arise during Phase 2:
+**Phase 3 Questions:**
+- Reference [PHASE_3_CORRECTION_REPORT.md](PHASE_3_CORRECTION_REPORT.md) for pre-flight findings
+- Check [PHASE_3_ARCHITECTURE_CORRECTIONS.md](PHASE_3_ARCHITECTURE_CORRECTIONS.md) for design details
+- Review [PHASE_3_API_VERIFICATION.md](PHASE_3_API_VERIFICATION.md) for API specs
+
+**General Questions:**
 - Reference [DECISIONS.md](DECISIONS.md) for architectural rationale
 - Check [PERFORMANCE_LOG.md](PERFORMANCE_LOG.md) for expected costs/latency
 - Review [PROJECT_STATUS.md](PROJECT_STATUS.md) for known issues
-- All external requirements documented in [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
 ---
 
@@ -324,11 +326,19 @@ If questions arise during Phase 2:
 - ✓ Official APIs only (no TOS violations)
 - ✓ No browser automation or scraping
 - ✓ Transaction-safe database operations (ACID)
-- ✓ Token refresh prevents expiration during execution
+- ✓ Token persistence: Encrypted storage in Supabase (not Vercel env vars)
+- ✓ All authentication via secure OAuth 2.0 flows
 
 ---
 
-**Phase 1 Status:** ✓ Complete  
-**Ready for Phase 2:** ✓ Yes (pending your approval)
+## Project Status Summary
 
-See [ARCHITECTURE_PHASE1.md](ARCHITECTURE_PHASE1.md) to begin review.
+| Phase | Status | Date | Tests |
+|-------|--------|------|-------|
+| 1 | ✓ Complete | Sep 2026 | Architecture verified |
+| 2 | ✓ Complete | Sep 2026 | 83 unit tests |
+| 2.4 | ✓ Complete | Sep 3, 2026 | 32 integration tests |
+| 3 Pre-Flight | ✓ Complete | Sep 3, 2026 | APIs verified |
+| **3 Implementation** | **Ready** | **Awaiting credentials** | — |
+
+**Start Phase 3:** Provide credentials listed in [PHASE_3_CORRECTION_REPORT.md](PHASE_3_CORRECTION_REPORT.md)
