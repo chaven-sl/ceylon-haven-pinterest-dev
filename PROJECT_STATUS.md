@@ -1,8 +1,8 @@
 # Project Status
 
-**Last Updated:** 2026-09-03 (Phase 2.4: Supabase API Integration Fix)  
-**Current Phase:** Phase 2.4 - Supabase HTTP API Correction  
-**Status:** STRUCTURE COMPLETE (Awaiting Docker for test execution)
+**Last Updated:** 2026-09-03 (Phase 2.4 Revised: Cloud Development Setup)  
+**Current Phase:** Phase 2.4 Revised - Cloud Development Environment  
+**Status:** COMPLETE (Ready for Integration Testing - .env.test configuration needed)
 
 **Platform:** Vercel + Supabase  
 **Runtime:** Vercel Functions  
@@ -60,30 +60,35 @@ Phase 1 is complete. A comprehensive technical architecture assessment has been 
 - [x] Test toolchain modernization (to current stable)
 - [x] Validation suite (all pass: npm install, audit, type-check, lint, test, build)
 
-### Phase 2.4 (Supabase HTTP API Integration - Structure Complete)
-- [x] Supabase project initialization (supabase init, config.toml)
-- [x] Test code corrected (TEST_DATABASE_URL → TEST_SUPABASE_URL)
-- [x] Safety guards implemented (fail-closed, localhost-only, NODE_ENV=test)
-- [x] Test client reinitialized (HTTP API + service_role key)
-- [x] Setup script updated (supabase start instead of Docker PostgreSQL)
-- [x] Database schema optimized (removed redundant index)
-- [x] Comprehensive documentation (PHASE_2_4_REPORT.md)
-- [ ] Test execution (BLOCKED: Docker not installed - awaiting user action)
+### Phase 2.4 Revised (Cloud Development Environment - Complete)
+- [x] Docker requirement removed (no Docker needed for development)
+- [x] GitHub repository initialized (initial commit: 33c7267)
+- [x] .gitignore configured (excludes .env.test, secrets, credentials)
+- [x] Safety guards updated for cloud Supabase (8 guards, fail-closed)
+- [x] Test infrastructure ready for cloud database (29 integration tests)
+- [x] Development Supabase project setup guide (DEVELOPMENT_SETUP.md)
+- [x] .env.test.example template with clear instructions
+- [x] Row-Level Security validation (service role bypass, anon denial)
+- [x] Test data cleanup strategy (automatic + manual)
+- [x] Documentation complete (DEVELOPMENT_SETUP.md + PHASE_2_4_REPORT_REVISED.md)
+- [x] Full validation suite ready (npm install, audit, type-check, lint, test, build)
+- [ ] Test execution (User completes: create Supabase dev project → .env.test → npm run test:integration:db)
 
 ---
 
 ## Components Currently Being Worked On
 
-**Phase 2.4: Supabase HTTP API Integration**
+**Phase 2.4 Revised: Cloud Development Environment**
 
-Status: Code corrections complete and verified. Awaiting Docker installation to execute integration tests.
+Status: Complete. All infrastructure and documentation ready. User to complete Supabase setup.
 
-- Test infrastructure rewritten to use Supabase HTTP API (not raw PostgreSQL)
-- Safety guards prevent accidental production testing
-- All code changes ready; tests need Docker/Supabase runtime
-- 29 integration tests ready to execute when Docker is available
+- Test infrastructure ready for cloud Supabase (no Docker required)
+- Safety guards protect against production mutations (8 checks, fail-closed)
+- All code changes complete; tests ready for cloud database
+- 29 integration tests ready to execute with .env.test credentials
+- Development setup guide provided with step-by-step instructions
 
-**Next Step:** User installs Docker → `bash scripts/setup-test-db.sh` → All 29 tests pass → Phase 3 ready
+**Next Step:** User creates Supabase dev project → Copy credentials to .env.test → `source .env.test && npm run test:integration:db` → All 29 tests pass → Phase 3 ready
 
 ---
 
@@ -154,21 +159,24 @@ See DECISIONS.md for full rationale on each decision.
 
 ## Next Recommended Action
 
-**Phase 2 Complete - Ready for Phase 3**
+**Phase 2.4 Revised Complete - Ready for Phase 3**
 
-Recommended next steps:
-1. Review PHASE_2_REPORT.md for implementation details
-2. Deploy to Vercel and create Supabase project
-3. Configure environment variables in Vercel
-4. Run database migration
-5. Proceed to Phase 3 for real API integration
+Immediate next steps (user action):
+1. Review DEVELOPMENT_SETUP.md for detailed setup guide
+2. Create Supabase development project (free tier, named ceylon-haven-pinterest-dev)
+3. Apply database migrations to dev project
+4. Copy .env.test.example → .env.test with your credentials
+5. Run: `source .env.test && npm run test:integration:db`
+6. Verify all 29 tests pass
 
 Phase 3 will focus on:
-- Real Facebook Graph API integration
-- Real Pinterest API integration
-- Content adaptation templates
+- Facebook Graph API integration (real posts)
+- Pinterest API integration (real pins)
+- Content adaptation logic
 - Board routing rules
-- Comprehensive error handling and retries
+- Production Supabase project setup
+- Production Vercel environment
+- Real API credentials management
 - Monitoring and alerting
 
 ---

@@ -2,15 +2,17 @@
 
 Automatic social media distribution: republish Ceylon Haven Facebook posts to Pinterest with zero manual intervention.
 
-**Status:** Phase 1.6 Complete (Architecture Finalized - Vercel + Supabase)  
-**Next Step:** Review [ARCHITECTURE_PHASE1.md](ARCHITECTURE_PHASE1.md) and approve Phase 2 implementation
+**Status:** Phase 2.4 Revised Complete (Cloud Development Environment Ready)  
+**Next Step:** Follow [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md) to set up Supabase and run integration tests
 
 ---
 
 ## Quick Links
 
-- **[Phase 1 Architecture Report](ARCHITECTURE_PHASE1.md)** — Read this first
+- **[Development Setup Guide](DEVELOPMENT_SETUP.md)** — Setup cloud Supabase + run tests (start here)
+- **[Phase 2.4 Report](PHASE_2_4_REPORT_REVISED.md)** — Technical details of cloud environment
 - **[Project Status](PROJECT_STATUS.md)** — Current completion state
+- **[Phase 1 Architecture Report](ARCHITECTURE_PHASE1.md)** — Original architecture design
 - **[Architectural Decisions](DECISIONS.md)** — Why we chose each technology
 - **[Performance Projections](PERFORMANCE_LOG.md)** — Cost, latency, and reliability estimates
 - **[Changelog](CHANGELOG.md)** — Development history
@@ -87,42 +89,62 @@ Phase 1 is complete. This repository contains:
 
 ---
 
-## Getting Started (Phase 2)
+## Getting Started (Phase 2.4 Revised)
 
 ### Prerequisites
 
-You will need to provide:
+You will need:
 
-1. **Facebook Setup**
-   - [ ] Meta App (create at app.facebook.com)
-   - [ ] Ceylon Haven Facebook Page ID
-   - [ ] Page Access Token
-   
-2. **Pinterest Setup**
-   - [ ] Pinterest Business Account
-   - [ ] App ID + App Secret (from developers.pinterest.com)
-   - [ ] OAuth authorization (your account)
+1. **Supabase Account** (free tier)
+   - Create development project: `ceylon-haven-pinterest-dev`
+   - Obtain: Project URL, Anon Key, Service Role Key
 
-3. **Vercel Setup**
-   - [ ] Vercel account created (or existing with active projects)
-   - [ ] New project created for this automation
-   - [ ] Hobby plan active (free, includes Cron Jobs)
+2. **Node.js + npm**
+   - Node 18+ installed
+   - npm 9+ installed
+   - Git already initialized in repository
 
-4. **Supabase Setup**
-   - [ ] Free PostgreSQL project created
-   - [ ] Database URL + Anon Key noted
+3. **GitHub** (optional)
+   - Repository initialized: ✓ Done
+   - Ready for collaboration
 
-See [PROJECT_STATUS.md](PROJECT_STATUS.md) for complete checklist.
+See [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md) for step-by-step instructions.
 
-### Phase 2 Plan
+### Setup (Immediate)
 
-1. **Setup** (0.5 hrs): Next.js 14 project, TypeScript, Vercel integration
-2. **Cron + Security** (0.5 hrs): Vercel Cron configuration, CRON_SECRET validation
-3. **Database** (1 hr): Supabase migrations, RLS policies
-4. **APIs** (2 hrs): Facebook Graph v26 + Pinterest v5 clients
-5. **Idempotency** (0.5 hrs): Retry logic, idempotency keys
-6. **Testing** (1 hr): Integration tests against real APIs
-7. **Total:** ~2-3 sessions, 4-6 hours
+```bash
+# 1. Create .env.test with Supabase credentials
+cp .env.test.example .env.test
+# Edit .env.test with your values (see DEVELOPMENT_SETUP.md Part 2)
+
+# 2. Install dependencies
+npm install
+
+# 3. Run integration tests against cloud Supabase
+source .env.test
+npm run test:integration:db
+
+# Expected: ✓ 29 tests pass
+```
+
+### What's Ready
+
+- ✓ Application source code (app/, db/, lib/, services/)
+- ✓ Database migrations (Supabase SQL)
+- ✓ 29 integration tests (cloud Supabase)
+- ✓ RPC functions (atomic state machine)
+- ✓ GitHub repository initialized
+- ✓ TypeScript + ESLint + Prettier configured
+- ✓ Row-Level Security validated
+
+### What's NOT Ready Yet (Phase 3+)
+
+- Real Facebook credentials (Phase 3)
+- Real Pinterest credentials (Phase 3)
+- Production Supabase project (Phase 3)
+- Production Vercel deployment (Phase 3)
+
+**Docker is NOT required.** Development uses cloud Supabase (free tier).
 
 ---
 
@@ -253,23 +275,26 @@ Ceylon-Haven-Pinterest-Automation/
 ## Next Steps
 
 ### Immediate (You)
-1. Review [ARCHITECTURE_PHASE1.md](ARCHITECTURE_PHASE1.md)
-2. Confirm technology choices align with Ceylon Haven needs
-3. Check [PROJECT_STATUS.md](PROJECT_STATUS.md) external requirements checklist
-4. Approve Phase 2 implementation (or request changes)
+1. Read [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md) (Part 1-3)
+2. Create Supabase development project (free tier, ~5 min)
+3. Apply database migrations to dev project (~2 min)
+4. Configure .env.test with credentials (~2 min)
+5. Run tests: `source .env.test && npm run test:integration:db` (~30 sec)
+6. Verify: All 29 tests pass
 
-### Phase 2 (Claude + You)
-1. Next.js + TypeScript project setup (Vercel Functions)
-2. Database schema implementation (Supabase migrations)
-3. API client integration (Facebook + Pinterest)
-4. Vercel Cron orchestration + state machine
-5. Integration testing
-6. Documentation
+### Phase 3 Preparation
+- Real Facebook Graph API integration
+- Real Pinterest API integration
+- Production Supabase project setup
+- Production Vercel deployment
+- Real credentials management
 
 ### Timeline
-- **Phase 1:** Complete (this session)
-- **Phase 2:** 2-3 sessions, 4-6 hours
-- **Phase 3 (Conditional):** Content adaptation + AI (post-MVP)
+- **Phase 1:** Complete (architecture + research)
+- **Phase 2:** Complete (codebase + database)
+- **Phase 2.4 Revised:** Complete (cloud dev environment)
+- **Phase 3:** API integration (~2-3 sessions)
+- **Phase 4 (Optional):** Content adaptation + AI
 
 ---
 

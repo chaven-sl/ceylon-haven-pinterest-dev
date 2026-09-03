@@ -16,57 +16,92 @@ import * as operations from '../db/operations';
  * not raw PostgreSQL connections. This validates the API layer used in production.
  */
 
-// Supabase test configuration - MUST be local only
+// Supabase test configuration - MUST NOT target production
 const TEST_SUPABASE_URL = process.env['TEST_SUPABASE_URL'];
+const TEST_SUPABASE_ANON_KEY = process.env['TEST_SUPABASE_ANON_KEY'];
 const TEST_SUPABASE_SERVICE_ROLE_KEY = process.env['TEST_SUPABASE_SERVICE_ROLE_KEY'];
+const TEST_SUPABASE_PROJECT_REF = process.env['TEST_SUPABASE_PROJECT_REF'];
+const ALLOW_REMOTE_TEST_DATABASE = process.env['ALLOW_REMOTE_TEST_DATABASE'] === 'true';
 
 let client: SupabaseClient;
+let anonClient: SupabaseClient;
 
 /**
  * SAFETY GUARDS - Fail Closed
  * Tests refuse to run unless ALL conditions are met:
  * 1. NODE_ENV === 'test'
- * 2. TEST_SUPABASE_URL is set and is localhost-only
- * 3. TEST_SUPABASE_SERVICE_ROLE_KEY is set
+ * 2. ALLOW_REMOTE_TEST_DATABASE === 'true'
+ * 3. TEST_SUPABASE_URL is set and is NOT production
+ * 4. TEST_SUPABASE_PROJECT_REF is set and matches URL
+ * 5. TEST_SUPABASE_SERVICE_ROLE_KEY is set
  */
 beforeAll(async () => {
   // Guard 1: NODE_ENV must be 'test'
-  if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'test') {
+  if (process.env.NODE_ENV !== 'test') {
     throw new Error(
       'SAFETY GUARD FAILED: NODE_ENV must be "test". ' +
-        'Integration tests are local-only and must explicitly opt-in via environment.'
+        'Integration tests must explicitly opt-in via environment. Run: NODE_ENV=test npm run test:integration:db'
     );
   }
 
-  // Guard 2: TEST_SUPABASE_URL must be set
+  // Guard 2: ALLOW_REMOTE_TEST_DATABASE must be explicitly set to 'true'
+  if (!ALLOW_REMOTE_TEST_DATABASE) {
+    throw new Error(
+      'SAFETY GUARD FAILED: ALLOW_REMOTE_TEST_DATABASE must be "true". ' +
+        'Set in .env.test to enable cloud database testing.'
+    );
+  }
+
+  // Guard 3: TEST_SUPABASE_URL must be set
   if (!TEST_SUPABASE_URL) {
     throw new Error(
       'SAFETY GUARD FAILED: TEST_SUPABASE_URL environment variable not set. ' +
-        'Start local Supabase with: supabase start'
+        'Set TEST_SUPABASE_URL in .env.test (e.g., https://xxxxx.supabase.co)'
     );
   }
 
-  // Guard 3: TEST_SUPABASE_URL must be localhost-only (fail closed on production URLs)
-  const isLocalhost = TEST_SUPABASE_URL.includes('localhost') || TEST_SUPABASE_URL.includes('127.0.0.1');
-  if (!isLocalhost) {
+  // Guard 4: TEST_SUPABASE_PROJECT_REF must be set
+  if (!TEST_SUPABASE_PROJECT_REF) {
     throw new Error(
-      'SAFETY GUARD FAILED: TEST_SUPABASE_URL is not localhost. ' +
-        'Integration tests ONLY run against local Supabase to prevent production mutations. ' +
-        `Got: ${TEST_SUPABASE_URL}`
+      'SAFETY GUARD FAILED: TEST_SUPABASE_PROJECT_REF environment variable not set. ' +
+        'Set TEST_SUPABASE_PROJECT_REF in .env.test (the project reference from Supabase dashboard)'
     );
   }
 
-  // Guard 4: TEST_SUPABASE_SERVICE_ROLE_KEY must be set
+  // Guard 5: Positive identification - URL must match project ref
+  if (!TEST_SUPABASE_URL.includes(TEST_SUPABASE_PROJECT_REF)) {
+    throw new Error(
+      `SAFETY GUARD FAILED: TEST_SUPABASE_URL does not match TEST_SUPABASE_PROJECT_REF. ` +
+        `URL must contain project ref. URL: ${TEST_SUPABASE_URL}, Ref: ${TEST_SUPABASE_PROJECT_REF}`
+    );
+  }
+
+  // Guard 6: Refuse production projects
+  if (TEST_SUPABASE_PROJECT_REF.includes('prod') || TEST_SUPABASE_URL.includes('production')) {
+    throw new Error(
+      'SAFETY GUARD FAILED: Integration tests must not target production. ' +
+        'Use a dedicated development Supabase project (e.g., ceylon-haven-pinterest-dev).'
+    );
+  }
+
+  // Guard 7: TEST_SUPABASE_SERVICE_ROLE_KEY must be set
   if (!TEST_SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error(
       'SAFETY GUARD FAILED: TEST_SUPABASE_SERVICE_ROLE_KEY environment variable not set. ' +
-        'Obtain from: supabase status (after supabase start)'
+        'Obtain from Supabase dashboard: Project Settings → API → Service Role Key'
     );
   }
 
-  // Initialize Supabase client for tests
-  // Using service_role key to bypass RLS for test cleanup operations
-  // In production, this key never leaves the server
+  // Guard 8: TEST_SUPABASE_ANON_KEY must be set (for RLS testing)
+  if (!TEST_SUPABASE_ANON_KEY) {
+    throw new Error(
+      'SAFETY GUARD FAILED: TEST_SUPABASE_ANON_KEY environment variable not set. ' +
+        'Obtain from Supabase dashboard: Project Settings → API → Anon Key'
+    );
+  }
+
+  // Initialize Supabase clients
+  // Service role client: Full permissions, bypasses RLS (for test setup/cleanup)
   client = createClient(TEST_SUPABASE_URL, TEST_SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       autoRefreshToken: false,
@@ -74,7 +109,15 @@ beforeAll(async () => {
     },
   });
 
-  console.log(`✓ Safety guards passed. Connected to local Supabase at ${TEST_SUPABASE_URL}`);
+  // Anon client: Limited permissions, respects RLS (for testing security)
+  anonClient = createClient(TEST_SUPABASE_URL, TEST_SUPABASE_ANON_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  console.log(`✓ Safety guards passed. Connected to Supabase development project: ${TEST_SUPABASE_PROJECT_REF}`);
 });
 
 afterAll(async () => {
