@@ -46,20 +46,21 @@ A comprehensive final technical correction pass has been completed to verify and
 
 **Current Endpoint (Verified):**
 ```
-https://api.pinterest.com/oauth/?response_type=code&client_id=YOUR_APP_ID&redirect_uri=YOUR_REDIRECT_URI&scope=pins:write,pins:read,boards:read&state=UNIQUE_STATE
+https://www.pinterest.com/oauth/?response_type=code&client_id=YOUR_APP_ID&redirect_uri=YOUR_REDIRECT_URI&scope=boards:read,pins:write&state=UNIQUE_STATE
 ```
 
 **Token Endpoint (Verified):**
 ```
 POST https://api.pinterest.com/v5/oauth/token
+Authorization: Basic base64(client_id:client_secret)
 Content-Type: application/x-www-form-urlencoded
 
-grant_type=authorization_code&code=AUTH_CODE&client_id=CLIENT_ID&client_secret=CLIENT_SECRET&redirect_uri=REDIRECT_URI
+grant_type=authorization_code&code=AUTH_CODE&redirect_uri=REDIRECT_URI&continuous_refresh=true
 ```
 
 **HTTP Authentication Method:**
-- Basic Auth: `Authorization: Basic base64(client_id:client_secret)`
-- Alternative: client_id and client_secret in request body
+- Basic Auth: `Authorization: Basic base64(client_id:client_secret)` (REQUIRED)
+- Credentials: Sent in Basic header (NOT in body)
 
 **Source:** PHASE_3_API_VERIFICATION.md Section "OAuth 2.0 Implementation" (verified against current official documentation)
 

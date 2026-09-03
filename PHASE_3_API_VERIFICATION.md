@@ -100,44 +100,55 @@ fields=id,created_time,message,story,full_picture,attachments,permalink_url,stat
 
 **Authorization Endpoint:**
 ```
-https://api.pinterest.com/oauth/?response_type=code&client_id=YOUR_APP_ID&redirect_uri=YOUR_REDIRECT_URI&scope=pins:write,pins:read,boards:read&state=UNIQUE_STATE
+https://www.pinterest.com/oauth/?response_type=code&client_id=YOUR_APP_ID&redirect_uri=YOUR_REDIRECT_URI&scope=boards:read,pins:write&state=UNIQUE_STATE
 ```
 
 **Token Endpoint:**
 ```
 POST https://api.pinterest.com/v5/oauth/token
+Authorization: Basic base64(client_id:client_secret)
 Content-Type: application/x-www-form-urlencoded
 
-grant_type=authorization_code&code=AUTH_CODE&client_id=CLIENT_ID&client_secret=CLIENT_SECRET&redirect_uri=REDIRECT_URI
+grant_type=authorization_code&code=AUTH_CODE&redirect_uri=REDIRECT_URI&continuous_refresh=true
 ```
 
 **HTTP Authentication Method:**
-- Basic Auth: `Authorization: Basic base64(client_id:client_secret)`
-- OR Body params: `client_id` and `client_secret` in request body
+- Basic Auth: `Authorization: Basic base64(client_id:client_secret)` (REQUIRED)
+- Body params: `client_id` and `client_secret` in Basic header (NOT in body)
 
 ### Required Scopes (Minimum Set)
 
 For this automation project:
-- `pins:write` - Create pins on behalf of user
 - `boards:read` - Read user's boards
-- `pins:read` (optional) - Read existing pins for validation
+- `pins:write` - Create pins on behalf of user
 
 NOT required:
+- `pins:read` (not used in Phase 3)
 - `boards:write` (not needed for read-only board access)
 - `ads:read`, `ads:write` (not needed for this automation)
 
 ### Access Token & Refresh Token
 
 **Access Token:**
-- Lifetime: 30 days (expires after)
-- Acquisition: OAuth 2.0 authorization code flow
+- Lifetime: 30 days (check `expires_in` response field for exact value)
+- Acquisition: OAuth 2.0 authorization code flow with `continuous_refresh=true`
 - Storage: Must be encrypted at rest in Supabase
+- Refresh: Use refresh token to obtain new access_token before expiry
 
 **Refresh Token:**
-- Lifetime: 60-day rolling window (resets on each refresh)
-- Behavior: Returns **new refresh token** on each refresh (must be updated)
-- Expiration: If not refreshed for 60 days, it becomes invalid
-- Recommendation: Proactive refresh every 25 days (same as Facebook strategy)
+- Lifetime: 60+ days rolling window (resets on each refresh)
+- Continuous Refresh: Enable with `continuous_refresh=true` parameter in initial token exchange
+- Behavior: Returns **new refresh_token** on each refresh (must be persisted to Supabase)
+- Expiration: If not refreshed for 60+ days, it becomes invalid (user must re-authorize)
+- Recommendation: Proactive refresh every 25 days (before access_token expiry)
+
+**Token Response Fields:**
+- `access_token` - Bearer token for API calls
+- `refresh_token` - Token to obtain new access_token
+- `expires_in` - Access token lifetime in seconds (~2592000 = 30 days)
+- `refresh_token_expires_in` - Refresh token lifetime in seconds (~5184000 = 60 days)
+- `token_type` - Always "Bearer"
+- `scope` - Granted scopes (boards:read,pins:write)
 
 ### Pin Creation Endpoint
 

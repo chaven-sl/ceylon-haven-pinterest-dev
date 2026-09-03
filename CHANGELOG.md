@@ -6,6 +6,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [Phase 3 OAuth Patch] - 2026-09-03 (Pinterest OAuth Specification Corrections)
+
+**Timestamp:** 2026-09-03  
+**Phase:** 3 Pre-Flight - OAuth Surgical Patch
+
+### Overview
+
+Surgical corrections to Pinterest OAuth 2.0 implementation specifications. All changes are specification corrections only—no architecture redesign.
+
+### Corrections Applied
+
+**1. Authorization Endpoint**
+- Old: `https://api.pinterest.com/oauth/`
+- New: `https://www.pinterest.com/oauth/`
+- Impact: OAuth authorization flow must use correct domain
+
+**2. Token Endpoint**
+- Confirmed: `https://api.pinterest.com/v5/oauth/token`
+- Authentication: Basic Auth header (client_id:client_secret base64 encoded)
+- Impact: Token exchange now explicitly documents correct endpoint
+
+**3. Continuous Refresh Token Parameter**
+- Added: `continuous_refresh=true` to initial token exchange
+- Effect: Enables automatic refresh-token renewal on each use
+- Impact: Refresh tokens valid for 60+ days with rolling expiry
+
+**4. Refresh Token Lifecycle Documentation**
+- Access token: ~30 days (verify exact from `expires_in` response field)
+- Refresh token: 60+ days, rolls forward on each refresh
+- On each refresh: NEW refresh_token returned (must persist to Supabase)
+- Proactive refresh: every 25 days before access_token expiry
+- Failure: if refresh_token expires, user must re-authorize
+
+**5. Scope Minimality Confirmation**
+- Required: `boards:read`, `pins:write`
+- Removed from Phase 3: `pins:read` (not needed for pin creation)
+- Impact: Minimal permission footprint
+
+**6. Documentation Corrections Table**
+- Old: Multiple entries showing "Requires update"
+- New: All documentation marked as "✓ Reconciled"
+- Impact: No stale update instructions remain
+
+### Validation Results
+
+- Type checking: ✓ PASS
+- ESLint: ✓ PASS
+- Unit tests: ✓ 83 passed
+- Build: ✓ SUCCESS
+
+### Recommendation
+
+**GO FOR CREDENTIAL SETUP** - All OAuth specifications corrected, validated, and documented. Ready for Pinterest app credential configuration.
+
+---
+
 ## [Phase 3 Pre-Flight] - 2026-09-03 (Document Reconciliation & Architecture Corrections)
 
 **Timestamp:** 2026-09-03 (Reconciliation Pass)  

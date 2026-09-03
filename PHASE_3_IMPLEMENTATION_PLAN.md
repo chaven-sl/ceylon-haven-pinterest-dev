@@ -48,16 +48,16 @@
 
 **Stale Information Identified and Status:**
 
-### Files with Corrections Required
+### Documentation Corrections Status
 
-| File | Issue | Status | Action |
-|------|-------|--------|--------|
-| PROJECT_STATUS.md | Claims "29 integration tests still awaiting execution" | STALE | Requires update to reflect 32 passed tests |
-| PHASE_2_4_HANDOFF.md | Claims tests are "pending" execution | STALE | Requires update to reflect passed tests |
-| PHASE_2_4_HANDOFF_SUMMARY.md | Claims test execution blocked on Docker | STALE | Requires update (tests actually completed on cloud Supabase) |
-| DEVELOPMENT_SETUP.md | References "29 tests" instead of 32 | STALE | Requires count update |
-| README.md | References "29 tests pass" in setup section | STALE | Requires count update to 32 |
-| CHANGELOG.md | Phase 2.4 entry says "Test execution (awaiting Docker installation)" | STALE | Should be updated to reflect actual completion |
+| File | Issue | Final Status |
+|------|-------|--------------|
+| PROJECT_STATUS.md | Claims "29 integration tests still awaiting execution" | ✓ Reconciled |
+| PHASE_2_4_HANDOFF.md | Claims tests are "pending" execution | ✓ Reconciled |
+| PHASE_2_4_HANDOFF_SUMMARY.md | Claims test execution blocked on Docker | ✓ Reconciled |
+| DEVELOPMENT_SETUP.md | References "29 tests" instead of 32 | ✓ Reconciled |
+| README.md | References "29 tests pass" in setup section | ✓ Reconciled |
+| CHANGELOG.md | Phase 2.4 entry needs completion status | ✓ Reconciled |
 
 **Corrections Summary:**
 - 32 integration tests (not 29) have been executed and passed
@@ -1759,9 +1759,9 @@ Pinterest OAuth Setup (Requires User Interaction, CORRECTED ARCHITECTURE):
   ├─ Navigate to developers.pinterest.com
   ├─ Create or select Pinterest app
   ├─ Configure: OAuth Redirect URI = https://[project].vercel.app/api/oauth/callback
-  ├─ Configure scopes: pins:write, boards:read, pins:read
+  ├─ Configure scopes: boards:read, pins:write
   ├─ User must authorize app:
-  │  ├─ POST to: https://api.pinterest.com/oauth/
+  │  ├─ GET to: https://www.pinterest.com/oauth/
   │  ├─ User logs in and approves
   │  ├─ Redirect to callback with auth_code
   │  └─ Exchange auth_code for tokens
@@ -2056,11 +2056,11 @@ Vercel deployment tracking:
 4. User OAuth Authorization (Your Account)
    ```
    a. In browser, navigate to:
-      https://api.pinterest.com/oauth/?client_id=YOUR_APP_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=pins:read,pins:write,boards:read
+      https://www.pinterest.com/oauth/?client_id=YOUR_APP_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=boards:read,pins:write&state=UNIQUE_STATE
    
    b. Pinterest login screen appears
    c. Log in with your Pinterest account (business account recommended)
-   d. Grant app permission (review scopes: pins:read, pins:write, boards:read)
+   d. Grant app permission (review scopes: boards:read, pins:write)
    e. Click "Allow"
    f. Redirected to https://[your-vercel-project].vercel.app/api/oauth/callback?code=AUTHORIZATION_CODE
    g. Copy the "code" parameter value from URL
@@ -2068,13 +2068,13 @@ Vercel deployment tracking:
 
 5. Exchange Authorization Code for Tokens
    ```bash
-   curl -X POST https://api.pinterest.com/oauth/token \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "client_id=YOUR_APP_ID" \
-     -d "client_secret=YOUR_APP_SECRET" \
-     -d "grant_type=authorization_code" \
-     -d "code=AUTHORIZATION_CODE" \
-     -d "redirect_uri=YOUR_REDIRECT_URI"
+   curl -X POST https://api.pinterest.com/v5/oauth/token \
+     --header "Authorization: Basic BASE64_CLIENT_ID_COLON_SECRET" \
+     --header "Content-Type: application/x-www-form-urlencoded" \
+     --data-urlencode "grant_type=authorization_code" \
+     --data-urlencode "code=AUTHORIZATION_CODE" \
+     --data-urlencode "redirect_uri=YOUR_REDIRECT_URI" \
+     --data-urlencode "continuous_refresh=true"
    ```
    
    Response:
@@ -2083,7 +2083,8 @@ Vercel deployment tracking:
      "access_token": "...",
      "refresh_token": "...",
      "expires_in": 2592000,
-     "scope": "pins:read,pins:write,boards:read",
+     "refresh_token_expires_in": 5184000,
+     "scope": "boards:read,pins:write",
      "token_type": "Bearer"
    }
    ```

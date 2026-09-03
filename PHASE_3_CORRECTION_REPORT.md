@@ -151,19 +151,21 @@ GET /v26.0/{page_id}/posts?fields=id,created_time,message,story,full_picture,att
 **Version:** v5 (confirmed current, 2026-09-03)
 
 **OAuth 2.0:**
-- Authorization: `https://api.pinterest.com/oauth/` (client_id, redirect_uri, scopes)
-- Token Endpoint: `https://api.pinterest.com/v5/oauth/token` (POST, Basic Auth)
-- HTTP Auth: Basic Auth `Authorization: Basic base64(client_id:client_secret)`
+- Authorization: `https://www.pinterest.com/oauth/` (client_id, redirect_uri, scopes, state)
+- Token Endpoint: `https://api.pinterest.com/v5/oauth/token` (POST, Basic Auth, continuous_refresh=true)
+- HTTP Auth: Basic Auth `Authorization: Basic base64(client_id:client_secret)` (REQUIRED)
 
-**Required Scopes:**
-- `pins:write` - Create pins
+**Required Scopes (Minimum):**
 - `boards:read` - List user's boards
-- `pins:read` (optional) - Read pins
+- `pins:write` - Create pins
+- `pins:read` - NOT required for Phase 3
 
 **Token Lifetime:**
-- Access Token: 30 days (expires)
-- Refresh Token: 60-day rolling (returns new refresh token on each refresh)
-- Strategy: Proactive refresh every 25 days
+- Access Token: ~30 days (check `expires_in` response field)
+- Refresh Token: 60+ days rolling (returns NEW refresh_token on each refresh, must persist)
+- Continuous Refresh: Enable with `continuous_refresh=true` in initial token exchange
+- Strategy: Proactive refresh every 25 days (before access_token expiry)
+- Failure: If refresh_token expires (60+ days unused), user must re-authorize
 
 **Pin Creation:**
 ```
