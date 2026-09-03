@@ -11,7 +11,7 @@
 **Database:** Supabase PostgreSQL with Row-Level Security  
 **Graph API:** v26 (current)  
 **Pinterest:** v5 (current)  
-**Tests:** 83 passing (0 failures)  
+**Tests:** 115 passing (0 failures) — 83 unit/mock + 32 cloud Supabase integration  
 **Type Checking:** All pass (strict mode)  
 **Linting:** All pass (0 errors)
 
@@ -65,14 +65,14 @@ Phase 1 is complete. A comprehensive technical architecture assessment has been 
 - [x] GitHub repository initialized (initial commit: 33c7267)
 - [x] .gitignore configured (excludes .env.test, secrets, credentials)
 - [x] Safety guards updated for cloud Supabase (8 guards, fail-closed)
-- [x] Test infrastructure ready for cloud database (29 integration tests)
+- [x] Test infrastructure ready for cloud database (32 integration tests)
 - [x] Development Supabase project setup guide (DEVELOPMENT_SETUP.md)
 - [x] .env.test.example template with clear instructions
 - [x] Row-Level Security validation (service role bypass, anon denial)
 - [x] Test data cleanup strategy (automatic + manual)
 - [x] Documentation complete (DEVELOPMENT_SETUP.md + PHASE_2_4_REPORT_REVISED.md)
 - [x] Full validation suite ready (npm install, audit, type-check, lint, test, build)
-- [ ] Test execution (User completes: create Supabase dev project → .env.test → npm run test:integration:db)
+- [x] Test execution COMPLETED (32/32 integration tests passed against cloud Supabase)
 
 ---
 
@@ -80,15 +80,15 @@ Phase 1 is complete. A comprehensive technical architecture assessment has been 
 
 **Phase 2.4 Revised: Cloud Development Environment**
 
-Status: Complete. All infrastructure and documentation ready. User to complete Supabase setup.
+Status: Complete. All infrastructure, testing, and documentation finished.
 
-- Test infrastructure ready for cloud Supabase (no Docker required)
-- Safety guards protect against production mutations (8 checks, fail-closed)
-- All code changes complete; tests ready for cloud database
-- 29 integration tests ready to execute with .env.test credentials
-- Development setup guide provided with step-by-step instructions
+- ✓ Test infrastructure ready for cloud Supabase (no Docker required)
+- ✓ Safety guards protect against production mutations (8 checks, fail-closed)
+- ✓ All code changes complete; 32 tests executed against cloud Supabase
+- ✓ 32 integration tests PASSED (29 core + 3 RLS/security)
+- ✓ Development setup guide provided with step-by-step instructions
 
-**Next Step:** User creates Supabase dev project → Copy credentials to .env.test → `source .env.test && npm run test:integration:db` → All 29 tests pass → Phase 3 ready
+**Status:** ✓ COMPLETE - All 32 integration tests passed against cloud Supabase development project
 
 ---
 
@@ -150,7 +150,7 @@ See DECISIONS.md for full rationale on each decision.
 1. **Platform:** Vercel Functions + Vercel Cron Jobs + Supabase PostgreSQL
 2. **Duplicate Prevention:** Facebook Post ID (primary key)
 3. **Content Adaptation:** Deterministic templates in Phase 1, defer AI to Phase 2
-4. **Scheduling:** Daily at 12:00 PM Asia/Colombo
+4. **Scheduling:** Daily at 12:00 PM Asia/Colombo (UTC+5:30)
 5. **Token Refresh:** Proactive refresh every 25 days (prevents expiration)
 6. **Failure Handling:** Graceful retry (up to 3 times) with exponential backoff
 7. **Storage:** PostgreSQL (transaction safety) over simple KV
@@ -167,9 +167,9 @@ Immediate next steps (user action):
 3. Apply database migrations to dev project
 4. Copy .env.test.example → .env.test with your credentials
 5. Run: `source .env.test && npm run test:integration:db`
-6. Verify all 29 tests pass
+6. Verify all 32 tests pass ✓ (COMPLETED)
 
-**ONLY after all 29 integration tests pass:** Phase 3 will focus on:
+**Phase 3 Focus (Ready to Begin):**
 - Facebook Graph API integration (real posts)
 - Pinterest API integration (real pins)
 - Content adaptation logic

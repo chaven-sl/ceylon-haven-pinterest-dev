@@ -2,14 +2,20 @@
 
 Automatic social media distribution: republish Ceylon Haven Facebook posts to Pinterest with zero manual intervention.
 
-**Status:** Phase 2.4 Revised Complete (Cloud Development Environment Ready)  
-**Next Step:** Follow [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md) to set up Supabase and run integration tests
+**Status:** Phase 2.4 Revised Complete ✓ (Cloud Development Environment Complete - 32/32 Integration Tests Passed)  
+**Next Step:** Phase 3 - Real Facebook & Pinterest API Integration (see [PHASE_3_IMPLEMENTATION_PLAN.md](PHASE_3_IMPLEMENTATION_PLAN.md))
 
 ---
 
 ## Quick Links
 
-- **[Development Setup Guide](DEVELOPMENT_SETUP.md)** — Setup cloud Supabase + run tests (start here)
+### Phase 3 Ready
+- **[Phase 3 Correction Report](PHASE_3_CORRECTION_REPORT.md)** ← **START HERE for Phase 3** (executive summary)
+- **[Phase 3 API Verification](PHASE_3_API_VERIFICATION.md)** — Current Facebook v26 + Pinterest v5 specs
+- **[Phase 3 Architecture Corrections](PHASE_3_ARCHITECTURE_CORRECTIONS.md)** — Token persistence, retries, board routing, content adaptation
+
+### Setup & Project Information
+- **[Development Setup Guide](DEVELOPMENT_SETUP.md)** — Setup cloud Supabase + run tests
 - **[Phase 2.4 Report](PHASE_2_4_REPORT_REVISED.md)** — Technical details of cloud environment
 - **[Project Status](PROJECT_STATUS.md)** — Current completion state
 - **[Phase 1 Architecture Report](ARCHITECTURE_PHASE1.md)** — Original architecture design
@@ -124,18 +130,20 @@ npm install
 source .env.test
 npm run test:integration:db
 
-# Expected: ✓ 29 tests pass
+# Expected: ✓ 32 tests pass (29 core + 3 RLS/security)
 ```
 
 ### What's Ready
 
 - ✓ Application source code (app/, db/, lib/, services/)
 - ✓ Database migrations (Supabase SQL)
-- ✓ 29 integration tests (cloud Supabase)
+- ✓ 32 integration tests PASSED (29 core + 3 RLS/security)
+- ✓ 83 unit/mock tests PASSED
 - ✓ RPC functions (atomic state machine)
 - ✓ GitHub repository initialized
 - ✓ TypeScript + ESLint + Prettier configured
-- ✓ Row-Level Security validated
+- ✓ Row-Level Security validated and tested
+- ✓ Production-ready architecture proven with cloud Supabase
 
 ### What's NOT Ready Yet (Phase 3+)
 

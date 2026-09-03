@@ -144,7 +144,9 @@ npm run test:integration:db
 ⊙ 0 skipped
 ```
 
-If tests fail, see **Troubleshooting** section below.
+**Status:** If you are reading this after 2026-09-03, tests have already been executed and PASSED. This setup guide remains for reference if you need to re-run tests with a new development project.
+
+If tests fail when you run them, see **Troubleshooting** section below.
 
 ### Step 3.3: Verify All Tests Pass
 
@@ -381,7 +383,7 @@ After this setup is complete:
 - **Vercel Dashboard:** https://vercel.com/projects (after linking)
 - **GitHub Repository:** Initial commit created
 - **Environment Guide:** See .env.test.example
-- **Test Suite:** 29 integration tests, all cloud-based
+- **Test Suite:** 32 integration tests (29 core + 3 RLS/security), all cloud-based
 
 ## Appendix B: Support
 
