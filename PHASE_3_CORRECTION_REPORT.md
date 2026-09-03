@@ -156,7 +156,7 @@ GET /v26.0/{page_id}/posts?fields=id,created_time,message,story,full_picture,att
 - HTTP Auth: Basic Auth `Authorization: Basic base64(client_id:client_secret)`
 
 **Required Scopes:**
-- `pins:create` - Create pins
+- `pins:write` - Create pins
 - `boards:read` - List user's boards
 - `pins:read` (optional) - Read pins
 
@@ -223,7 +223,7 @@ CREATE TABLE pinterest_oauth_tokens (
 );
 ```
 
-**Encryption:** libsodium (tweetnacl-js) - AES-256-secretbox
+**Encryption:** libsodium crypto_secretbox (XSalsa20-Poly1305, 256-bit key)
 
 **Token Refresh Flow:**
 1. Check token expiration on each cron run

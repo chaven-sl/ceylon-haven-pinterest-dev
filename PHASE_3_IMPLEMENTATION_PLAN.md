@@ -474,8 +474,8 @@ Pinterest OAuth Token Management (CORRECTED ARCHITECTURE)
        └─ TOKEN_ENCRYPTION_KEY (32-byte random, base64-encoded)
    
    └─→ [Supabase runtime storage (mutable per execution)]
-       ├─ access_token_encrypted (libsodium AES-256-secretbox)
-       ├─ refresh_token_encrypted (libsodium AES-256-secretbox)
+       ├─ access_token_encrypted (libsodium crypto_secretbox: XSalsa20-Poly1305, 256-bit key)
+       ├─ refresh_token_encrypted (libsodium crypto_secretbox: XSalsa20-Poly1305, 256-bit key)
        ├─ access_token_expires_at (TIMESTAMPTZ)
        ├─ refresh_token_expires_at (TIMESTAMPTZ)
        └─ last_refreshed_at (TIMESTAMPTZ)
@@ -1759,7 +1759,7 @@ Pinterest OAuth Setup (Requires User Interaction, CORRECTED ARCHITECTURE):
   ├─ Navigate to developers.pinterest.com
   ├─ Create or select Pinterest app
   ├─ Configure: OAuth Redirect URI = https://[project].vercel.app/api/oauth/callback
-  ├─ Configure scopes: pins:create, boards:read, pins:read
+  ├─ Configure scopes: pins:write, boards:read, pins:read
   ├─ User must authorize app:
   │  ├─ POST to: https://api.pinterest.com/oauth/
   │  ├─ User logs in and approves
@@ -2002,9 +2002,9 @@ Vercel deployment tracking:
    a. Navigate to App Roles → Test Users
    b. Create test user (or use your Facebook account)
    c. Grant permissions:
-      - manage_pages
       - pages_read_engagement
       - pages_read_user_content
+      (Note: DO NOT use manage_pages - deprecated)
    d. Go to Tools → Graph API Explorer
    e. Select your app from dropdown
    f. Select test user (or your account)
@@ -2645,7 +2645,7 @@ Mitigation:
 BLOCKER 1: No Facebook Page Access
 Blocker:  User hasn't granted app permission to Ceylon Haven page
 Remedy:  Must have: Admin access to Ceylon Haven Facebook page
-         Solution: Grant app "manage_pages" permission in Meta dashboard
+         Solution: Ensure app has pages_read_engagement + pages_read_user_content permissions (manage_pages is deprecated)
 
 
 BLOCKER 2: No Pinterest Business Account

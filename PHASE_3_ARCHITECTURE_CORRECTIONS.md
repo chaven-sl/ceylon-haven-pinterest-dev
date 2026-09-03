@@ -799,7 +799,7 @@ Pinterest Client Secret: [copy from dashboard]
 **Steps:**
 1. Go to Pinterest App Settings
 2. Add redirect URIs (same as Facebook above)
-3. Configure scopes: `pins:create`, `boards:read`, `pins:read`
+3. Configure scopes: `pins:write`, `boards:read`, `pins:read`
 4. Test OAuth flow locally
 5. Capture tokens securely
 

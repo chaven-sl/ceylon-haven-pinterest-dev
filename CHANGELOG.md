@@ -35,7 +35,7 @@ Comprehensive document reconciliation pass to synchronize canonical implementati
 
 **2. Pinterest Token Architecture (Supabase Encryption)**
 - Old: Tokens stored in Vercel environment variables
-- New: Tokens encrypted in Supabase (libsodium AES-256-secretbox)
+- New: Tokens encrypted in Supabase (libsodium crypto_secretbox: XSalsa20-Poly1305, 256-bit key)
 - Old: Refresh = Update Vercel env vars
 - New: Refresh = Supabase RPC function call
 - Vercel now stores: PINTEREST_APP_ID, PINTEREST_APP_SECRET, TOKEN_ENCRYPTION_KEY

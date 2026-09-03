@@ -70,8 +70,8 @@ Vercel (deployment-level only):
   - TOKEN_ENCRYPTION_KEY
 
 Supabase (runtime mutable):
-  - access_token_encrypted (libsodium AES-256)
-  - refresh_token_encrypted (libsodium AES-256)
+  - access_token_encrypted (libsodium crypto_secretbox: XSalsa20-Poly1305, 256-bit key)
+  - refresh_token_encrypted (libsodium crypto_secretbox: XSalsa20-Poly1305, 256-bit key)
   - access_token_expires_at
   - refresh_token_expires_at
 

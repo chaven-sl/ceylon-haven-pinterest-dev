@@ -100,7 +100,7 @@ fields=id,created_time,message,story,full_picture,attachments,permalink_url,stat
 
 **Authorization Endpoint:**
 ```
-https://api.pinterest.com/oauth/?response_type=code&client_id=YOUR_APP_ID&redirect_uri=YOUR_REDIRECT_URI&scope=pins:create,pins:read,boards:read&state=UNIQUE_STATE
+https://api.pinterest.com/oauth/?response_type=code&client_id=YOUR_APP_ID&redirect_uri=YOUR_REDIRECT_URI&scope=pins:write,pins:read,boards:read&state=UNIQUE_STATE
 ```
 
 **Token Endpoint:**
@@ -118,7 +118,7 @@ grant_type=authorization_code&code=AUTH_CODE&client_id=CLIENT_ID&client_secret=C
 ### Required Scopes (Minimum Set)
 
 For this automation project:
-- `pins:create` - Create pins on behalf of user
+- `pins:write` - Create pins on behalf of user
 - `boards:read` - Read user's boards
 - `pins:read` (optional) - Read existing pins for validation
 
@@ -210,7 +210,7 @@ GET /v5/user_account
 ### App Approval
 
 **App Review Required?**
-- `pins:create` scope: YES - requires App Review + demo video
+- `pins:write` scope: YES - requires App Review + demo video
 - Timeline: 2-4 weeks typical
 - Approval criteria: Demo showing legitimate use case (content automation for your property)
 
@@ -316,8 +316,8 @@ GET /v5/user_account
 | **Auth Method** | Page Access Token | OAuth 2.0 |
 | **Token Lifetime** | Permanent | 30 days (refresh 60 days) |
 | **Rate Limit Write** | 200/hour | 100/minute |
-| **App Review Needed** | No (own page) | Yes (pins:create) |
-| **Permissions** | pages_read_engagement, pages_read_user_content | pins:create, boards:read |
+| **App Review Needed** | No (own page) | Yes (pins:write) |
+| **Permissions** | pages_read_engagement, pages_read_user_content | pins:write, boards:read |
 
 ---
 
