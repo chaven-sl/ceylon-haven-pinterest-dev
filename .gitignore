@@ -1,0 +1,66 @@
+# Environment variables
+.env
+.env.local
+.env.test
+.env.test.local
+.env.*.local
+.env.production.local
+
+# Dependencies
+node_modules/
+yarn.lock
+pnpm-lock.yaml
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Supabase local
+.supabase/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.env.swp
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+.nyc_output/
+coverage/
+.jest/
+
+# OS
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# Credentials (extra safety)
+*.pem
+*.key
+*.crt
+credentials.json
+secrets.json
+
+# Sensitive secrets (never commit)
+SUPABASE_SERVICE_ROLE_KEY
+DATABASE_PASSWORD
+FACEBOOK_TOKEN
+PINTEREST_TOKEN
+CRON_SECRET
