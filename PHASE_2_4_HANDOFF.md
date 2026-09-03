@@ -91,7 +91,7 @@
 
 ## How to Proceed (User Action)
 
-### Step 1: Create Supabase Development Project (5 minutes)
+### Step 1: Create Cloud Supabase Development Project (5 minutes)
 
 1. Go to https://supabase.com/dashboard
 2. Create new project:
@@ -100,10 +100,11 @@
    - Region: closest to Asia/Colombo (e.g., Singapore)
    - Database password: strong random
 3. Wait for initialization (~2 min)
-4. Save credentials:
-   - Project URL: `https://[project-ref].supabase.co`
+4. Save credentials from project settings:
+   - Project URL: `https://[project-ref].supabase.co` (e.g., https://xyzabc.supabase.co)
+   - Project ref: `xyzabc` (from URL)
    - Anon key (public): `eyJ0eXAi...`
-   - Service role key (secret): `eyJ0eXAi...`
+   - Service role key (secret): `eyJ0eXAi...` (NEVER share this)
 
 ### Step 2: Apply Migrations (2 minutes)
 
@@ -112,26 +113,27 @@ In Supabase Studio (SQL Editor):
 2. Paste contents of `db/migrations/0002_atomic_operations.sql` → Run
 
 Verify tables and functions created:
-- ✓ facebook_posts
-- ✓ pinterest_pins
-- ✓ execution_logs
-- ✓ 6 RPC functions (with service-role privileges)
+- ✓ facebook_posts (with UNIQUE constraints)
+- ✓ pinterest_pins (with UNIQUE constraints)
+- ✓ execution_logs (with timestamp index)
+- ✓ 6 RPC functions restricted to service_role only
+- ✓ RLS enabled on operational tables
 
-### Step 3: Configure Credentials (2 minutes)
+### Step 3: Configure Development Credentials (2 minutes)
 
-Create `.env.test` in project root:
+Create `.env.test` in project root (NEVER commit this):
 ```
 NODE_ENV=test
 ALLOW_REMOTE_TEST_DATABASE=true
-TEST_SUPABASE_URL=https://[your-project].supabase.co
+TEST_SUPABASE_URL=https://[your-project-ref].supabase.co
+TEST_SUPABASE_PROJECT_REF=[your-project-ref]
 TEST_SUPABASE_ANON_KEY=[your-anon-key]
 TEST_SUPABASE_SERVICE_ROLE_KEY=[your-service-role-key]
-TEST_SUPABASE_PROJECT_REF=[your-project-ref]
 ```
 
-Ensure `.env.test` is in `.gitignore` (it is by default).
+**CRITICAL:** Ensure `.env.test` is in `.gitignore` (prevents accidental credential commits)
 
-### Step 4: Run Integration Tests (1 minute)
+### Step 4: Run Cloud Integration Tests (1 minute)
 
 ```bash
 source .env.test
@@ -140,13 +142,13 @@ npm run test:integration:db
 
 Expected output:
 ```
-✓ Supabase API Integration Tests (Cloud HTTP API)
+✓ Cloud Supabase Integration Tests (HTTPS API)
   ✓ Schema Validation (4 tests)
-  ✓ claim_for_publishing (4 tests)
-  ✓ record_published_pin (5 tests)
-  ✓ Retry operations (6 tests)
-  ✓ claimForRetry (3 tests)
-  ✓ State protection (9 tests)
+  ✓ claim_for_publishing Concurrency (4 tests)
+  ✓ recordPublishedPin Atomicity (5 tests)
+  ✓ Retry Operations (6 tests)
+  ✓ claimForRetry State Protection (3 tests)
+  ✓ Terminal State Protection (4 tests)
   ✓ markPostUncertain (2 tests)
   ✓ markPostSkipped (2 tests)
   ✓ RLS & Security Validation (3 tests)
@@ -161,8 +163,8 @@ npm install
 npm audit
 npm run type-check
 npm run lint
-npm test              # Unit + mock tests
-npm run test:integration:db  # Integration tests (cloud Supabase)
+npm test                 # Unit + mock tests (local)
+npm run test:integration:db  # Integration tests (cloud Supabase dev)
 npm run build
 ```
 
@@ -170,10 +172,12 @@ npm run build
 
 ## What Will Be Ready After Tests Pass
 
-✓ All 32 integration tests implemented (29 core + 3 RLS/security)  
-✓ Zero skipped tests expected (when Supabase dev project configured)  
-✓ Production parity confirmed (uses actual Supabase API layer)  
-✓ Phase 3 ready for real API integration (after tests pass)
+✓ All 32 integration tests EXECUTED against real cloud Supabase  
+✓ Zero skipped tests (tests will run against cloud, not mocked)  
+✓ Production parity PROVEN (uses actual Supabase HTTPS API, same as production)  
+✓ Security validation CONFIRMED (RLS denies anon, service role permitted)  
+✓ Database concurrency PROVEN (atomic operations, no races)  
+✓ Phase 3 approval (only after 32 tests pass)
 
 ---
 
@@ -201,56 +205,67 @@ npm run build
 
 ### The Problem (Why This Was Needed)
 ```
-Phase 2.3 used: createClient(postgresql://localhost:5432/..., key)
+Phase 2.3 used: createClient("postgresql://localhost:5432/...", key)
 This was WRONG because:
-- createClient() expects HTTP URL, got PostgreSQL URL
-- Bypassed Supabase API validation layer
-- RLS policies weren't tested
-- Not production-representative
+- createClient() expects Supabase HTTPS URL, not PostgreSQL connection string
+- Bypassed Supabase API and PostgREST layer entirely
+- RLS policies were not actually tested (direct DB access)
+- Did not match production architecture
 ```
 
 ### The Solution
 ```
-Phase 2.4 uses: createClient(http://localhost:54321, serviceRoleKey)
+Phase 2.4 Revised uses: createClient("https://[project-ref].supabase.co", serviceRoleKey)
 This is CORRECT because:
-- Uses actual Supabase HTTP API (PostgREST)
-- Tests real API constraints and transformations
-- Validates RLS policies
-- Exactly matches production behavior
+- Uses actual Supabase HTTPS API (exactly like production)
+- Tests through PostgREST layer (real API constraints)
+- Validates RLS policies (server-enforced security)
+- Cloud-based, no local Docker required
+- Same architecture as production Vercel → Supabase
 ```
 
 ### Why It Matters
-- **Before:** Tests connected to bare PostgreSQL
-- **After:** Tests connect to full Supabase stack (like production)
-- **When ready:** All 32 tests will pass with 0 skipped (after Supabase dev project created)
+- **Before:** Tests connected directly to bare PostgreSQL (bypassed API/RLS layer)
+- **After:** Tests connect to full cloud Supabase (matches production exactly)
+- **When ready:** All 32 tests will execute against real cloud Supabase when dev project is created
 
 ---
 
 ## Troubleshooting Quick Reference
 
-**Q: Docker says "command not found"**
-A: Install Docker Desktop from https://www.docker.com/
-
-**Q: Setup script fails to start Supabase**
-A: Make sure Docker is running (Docker.app on Mac, Docker daemon on Linux)
-
-**Q: Tests fail with "Connection refused"**
-A: Check Supabase is running: `supabase status`
-
-**Q: Tests fail with "NODE_ENV must be 'test'"**
-A: Load environment: `source .env.test` (and check it's there: `cat .env.test`)
-
-**Q: Tests hang or timeout**
-A: Restart Supabase:
+**Q: Tests fail with "TEST_SUPABASE_URL not set"**
+A: Make sure `.env.test` is created and loaded:
 ```bash
-supabase stop
-supabase start
-# Wait 2-3 minutes
-source .env.test
+cat .env.test  # Verify file exists
+source .env.test  # Load variables
 npm run test:integration:db
 ```
 
-See **TEST_SETUP_GUIDE.md** for complete troubleshooting section.
+**Q: Tests fail with "Unauthorized" or "403"**
+A: Check credentials in `.env.test`:
+- TEST_SUPABASE_URL should be `https://[project-ref].supabase.co`
+- TEST_SUPABASE_SERVICE_ROLE_KEY must be the secret key (not anon key)
+- TEST_SUPABASE_PROJECT_REF should match the URL project ref
+
+**Q: Tests fail with "project ref does not match"**
+A: Safety guard verified. Ensure:
+- TEST_SUPABASE_PROJECT_REF matches the project ref in TEST_SUPABASE_URL
+- Example: if URL is `https://abc123.supabase.co`, PROJECT_REF should be `abc123`
+
+**Q: "ALLOW_REMOTE_TEST_DATABASE not set"**
+A: This guard prevents accidental production testing. In `.env.test`, must have:
+```
+ALLOW_REMOTE_TEST_DATABASE=true
+NODE_ENV=test
+```
+
+**Q: Tests timeout or hang**
+A: Verify Supabase development project is:
+- Created and initialized on supabase.com
+- Migrations applied successfully
+- Network connectivity (can reach https://[project-ref].supabase.co)
+
+See **DEVELOPMENT_SETUP.md** for complete setup and troubleshooting section.
 
 ---
 
@@ -285,73 +300,80 @@ Once all 32 integration tests pass with 0 skipped, you're ready for Phase 3:
 
 ### Safety First
 - ✓ Tests ONLY run with `NODE_ENV=test`
-- ✓ Tests ONLY connect to localhost
-- ✓ Tests NEVER connect to production
-- ✓ All guards are fail-closed (errors if conditions not met)
+- ✓ Tests connect to DEVELOPMENT Supabase project ONLY (explicit project ref verification)
+- ✓ Tests NEVER connect to production Supabase
+- ✓ ALLOW_REMOTE_TEST_DATABASE=true required (prevents accidental dev project miss)
+- ✓ All guards are fail-closed (tests abort if conditions not met)
 
-### Credentials
-- `.env.test` is auto-generated (NOT in git)
-- Test credentials are ephemeral (regenerated on each `supabase start`)
-- Never expose service_role key in frontend code
+### Credentials (CRITICAL)
+- `.env.test` is manually created and NOT committed to git
+- Test credentials are for DEVELOPMENT project only
+- NEVER expose `TEST_SUPABASE_SERVICE_ROLE_KEY` in frontend/client code
+- Service role key used ONLY for backend and test execution
 - Production credentials stored in Vercel environment variables
 
-### Local Supabase
-- Runs only when `supabase start` is active
-- Stop with: `supabase stop`
-- Reset database with: `supabase db reset`
-- Studio dashboard at: http://localhost:54323 (while running)
+### Development Project Safety
+- Development Supabase project is completely separate from production
+- Used for integration testing only (disposable data)
+- Can be deleted and recreated anytime
+- Never use production or real customer data
+- Migrations are identical across dev and production
 
 ---
 
-## Command Cheat Sheet
+## Cloud Development Workflow
 
 ```bash
-# Setup (first time)
-bash scripts/setup-test-db.sh
+# One-time setup (after creating Supabase dev project and applying migrations)
+cat .env.test  # Verify credentials are present
 source .env.test
 
-# Run tests
+# Run tests against cloud Supabase
 npm run test:integration:db
 
-# Check Supabase status
-supabase status
+# Full validation suite
+npm install
+npm audit
+npm run type-check
+npm run lint
+npm test                    # Unit + mock tests
+npm run test:integration:db # Cloud Supabase integration tests
+npm run build
 
-# View database (optional)
-# Open http://localhost:54323 in browser
+# If tests fail, verify credentials
+echo "Project URL: $TEST_SUPABASE_URL"
+echo "Project Ref: $TEST_SUPABASE_PROJECT_REF"
+# (Service role key should NOT be printed)
 
-# Stop Supabase
-supabase stop
-
-# Reset database
-supabase db reset
-
-# Full validation
-npm install && npm audit && npm run type-check && npm run lint && npm test && npm run test:integration:db && npm run build
-
-# Restart everything
-supabase stop
-supabase start
-source .env.test
-npm run test:integration:db
+# After tests pass, ready for Phase 3
+# No cleanup needed (dev project stays for future testing)
 ```
 
 ---
 
 ## Summary
 
-**Phase 2.4 Revised:** Migrated from Docker-based testing to cloud development (GitHub → Vercel → Supabase dev)
+**Phase 2.4 Revised:** Cloud development environment with GitHub → Vercel Preview → Supabase dev project
 
-**Status:** Code complete, tests ready to execute (awaiting user Supabase dev project creation)
+**Architecture:**
+- GitHub: Source control (all code, migrations, tests)
+- Vercel: Preview/development deployment (optional)
+- Supabase: Dedicated development project (for integration testing)
+- Local: Unit tests + mock integration tests (no external resources needed)
+
+**Status:** Code complete, 32 integration tests ready to execute against cloud Supabase
 
 **Timeline:**
-1. Create Supabase dev project (5 min)
-2. Apply migrations (2 min)
-3. Configure credentials (2 min)
-4. Run tests (1 min)
-5. Validate (5 min)
+1. Create Supabase development project (5 min)
+2. Apply migrations via Supabase Studio (2 min)
+3. Create .env.test with cloud credentials (2 min)
+4. Run: `source .env.test && npm run test:integration:db` (1 min)
+5. Verify: All 32 tests pass with 0 skips
 6. Ready for Phase 3 ✓
 
 **Total time:** ~15 minutes
+
+**Safety:** 32 tests will verify MAX_RETRIES=3, failed→publishing retry model, service-role-only RPC security, and RLS protection before Phase 3
 
 ---
 
@@ -383,10 +405,13 @@ Refer to:
 
 ## Ready?
 
-1. **Create Supabase dev project** ← Start here
-2. Apply migrations
-3. Configure .env.test
-4. Run tests
-5. Celebrate ✓
+1. **Create cloud Supabase development project** ← Start here (free tier OK)
+2. **Apply migrations** to dev project (2 SQL files)
+3. **Create .env.test** with dev credentials
+4. **Run tests** against cloud Supabase
+5. **Verify:** 32 tests pass, 0 skipped
+6. **Celebrate** ✓ → Phase 3 ready
 
-Phase 2.4 Revised is complete. You've got everything needed. Go create that Supabase dev project and run the tests!
+**Status: READY FOR CLOUD INTEGRATION TESTING**
+
+Phase 2.4 Revised is complete. All code and tests are ready. Go create that cloud Supabase development project and verify the 32 tests pass!
