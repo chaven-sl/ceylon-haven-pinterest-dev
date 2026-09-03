@@ -767,4 +767,76 @@ describe('Supabase API Integration Tests (Local HTTP API)', () => {
       await cleanupTest(postId);
     });
   });
+
+  describe('RLS & Security Validation', () => {
+    it('anon client should be denied direct table access via RLS', async () => {
+      // Anon clients should be denied direct SELECT on facebook_posts table
+      const { error, data } = await anonClient
+        .from('facebook_posts')
+        .select('*')
+        .limit(1);
+
+      // Should fail with RLS error (typically error code indicates denied)
+      expect(error).not.toBeNull();
+      expect(error?.message).toContain('row level security');
+    });
+
+    it('anon client should be denied RPC execution on operational functions', async () => {
+      // Create a test post with service role first
+      const postId = `rls_test_${Date.now()}`;
+      const now = new Date().toISOString();
+      await client.from('facebook_posts').insert({
+        facebook_post_id: postId,
+        facebook_permalink: `https://facebook.com/post/${postId}`,
+        caption: 'Test post',
+        image_url: 'https://example.com/image.jpg',
+        date_published: now,
+        status: 'discovered',
+        created_at: now,
+        updated_at: now,
+      });
+
+      // Try to call claim_for_publishing with anon client
+      // Should be denied because function is restricted to service_role only
+      const { error } = await anonClient.rpc('claim_for_publishing', {
+        p_facebook_post_id: postId,
+      });
+
+      // Should fail (permission denied on function execution)
+      expect(error).not.toBeNull();
+      // Supabase returns PGRST107 or similar for permission denied
+      expect(error?.message.toLowerCase()).toContain('permission');
+
+      // Cleanup with service role
+      await client.from('facebook_posts').delete().eq('facebook_post_id', postId);
+    });
+
+    it('service role client should have full RPC access', async () => {
+      // Create a test post
+      const postId = `service_test_${Date.now()}`;
+      const now = new Date().toISOString();
+      await client.from('facebook_posts').insert({
+        facebook_post_id: postId,
+        facebook_permalink: `https://facebook.com/post/${postId}`,
+        caption: 'Test post',
+        image_url: 'https://example.com/image.jpg',
+        date_published: now,
+        status: 'discovered',
+        created_at: now,
+        updated_at: now,
+      });
+
+      // Service role should successfully call RPC
+      const { error, data } = await client.rpc('claim_for_publishing', {
+        p_facebook_post_id: postId,
+      });
+
+      expect(error).toBeNull();
+      expect(data).not.toBeNull();
+      expect(data?.[0]?.success).toBe(true);
+
+      // Cleanup
+      await client.from('facebook_posts').delete().eq('facebook_post_id', postId);
+    });
+  });
 });

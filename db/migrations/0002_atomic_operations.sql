@@ -249,3 +249,42 @@ COMMENT ON FUNCTION increment_retry_and_fail IS 'Atomically increment retry coun
 COMMENT ON FUNCTION claim_for_retry IS 'Atomically claim a failed post for retry if under limit (failed -> publishing)';
 COMMENT ON FUNCTION mark_post_uncertain IS 'Atomically mark publishing post as uncertain (publishing -> uncertain)';
 COMMENT ON FUNCTION mark_post_skipped IS 'Atomically skip a discovered post (discovered -> skipped)';
+
+-- Restrict operational RPC functions to service_role only
+-- These functions manage critical state transitions and must not be callable by public or anon users
+
+-- claim_for_publishing: Restrict to service_role
+REVOKE EXECUTE ON FUNCTION claim_for_publishing(TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION claim_for_publishing(TEXT) FROM anon;
+REVOKE EXECUTE ON FUNCTION claim_for_publishing(TEXT) FROM authenticated;
+GRANT EXECUTE ON FUNCTION claim_for_publishing(TEXT) TO service_role;
+
+-- record_published_pin: Restrict to service_role
+REVOKE EXECUTE ON FUNCTION record_published_pin(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION record_published_pin(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) FROM anon;
+REVOKE EXECUTE ON FUNCTION record_published_pin(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) FROM authenticated;
+GRANT EXECUTE ON FUNCTION record_published_pin(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) TO service_role;
+
+-- increment_retry_and_fail: Restrict to service_role
+REVOKE EXECUTE ON FUNCTION increment_retry_and_fail(TEXT, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION increment_retry_and_fail(TEXT, TEXT) FROM anon;
+REVOKE EXECUTE ON FUNCTION increment_retry_and_fail(TEXT, TEXT) FROM authenticated;
+GRANT EXECUTE ON FUNCTION increment_retry_and_fail(TEXT, TEXT) TO service_role;
+
+-- claim_for_retry: Restrict to service_role
+REVOKE EXECUTE ON FUNCTION claim_for_retry(TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION claim_for_retry(TEXT) FROM anon;
+REVOKE EXECUTE ON FUNCTION claim_for_retry(TEXT) FROM authenticated;
+GRANT EXECUTE ON FUNCTION claim_for_retry(TEXT) TO service_role;
+
+-- mark_post_uncertain: Restrict to service_role
+REVOKE EXECUTE ON FUNCTION mark_post_uncertain(TEXT, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION mark_post_uncertain(TEXT, TEXT) FROM anon;
+REVOKE EXECUTE ON FUNCTION mark_post_uncertain(TEXT, TEXT) FROM authenticated;
+GRANT EXECUTE ON FUNCTION mark_post_uncertain(TEXT, TEXT) TO service_role;
+
+-- mark_post_skipped: Restrict to service_role
+REVOKE EXECUTE ON FUNCTION mark_post_skipped(TEXT, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION mark_post_skipped(TEXT, TEXT) FROM anon;
+REVOKE EXECUTE ON FUNCTION mark_post_skipped(TEXT, TEXT) FROM authenticated;
+GRANT EXECUTE ON FUNCTION mark_post_skipped(TEXT, TEXT) TO service_role;

@@ -139,7 +139,7 @@ npm run test:integration:db
 **Expected output:**
 
 ```
-✓ 29 passed
+✓ 32 passed (29 core + 3 RLS/security)
 ✗ 0 failed
 ⊙ 0 skipped
 ```
@@ -157,15 +157,16 @@ The test output should show:
 - Terminal state protection (4 tests)
 - markPostUncertain (2 tests)
 - markPostSkipped (2 tests)
+- RLS & Security validation (3 tests)
 
-**Total: 29 tests, all passing**
+**Total: 32 tests (29 core + 3 RLS/security), all implemented and ready to execute**
 
 ## Part 4: Verify Row-Level Security (RLS)
 
 RLS tests are included in the integration suite and verify:
-- Anon Key cannot perform direct INSERT/UPDATE/DELETE (returns 403)
+- Anon Key cannot perform direct INSERT/UPDATE/DELETE (returns 403 via RLS policies)
 - Service Role Key bypasses RLS (succeeds)
-- RPC functions work with either key (permissions checked inside function)
+- Operational RPC functions (claim_for_publishing, record_published_pin, etc.) are restricted to service_role only (not callable by anon/public users)
 
 To manually test RLS:
 

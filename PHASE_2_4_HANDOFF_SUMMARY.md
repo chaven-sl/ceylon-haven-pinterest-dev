@@ -68,14 +68,15 @@
    - Clear instructions for each value
    - Safety notes about secrets
 
-### 4. Test Infrastructure (29 Tests)
+### 4. Test Infrastructure (32 Tests)
 - **Schema Validation:** 4 tests
 - **Concurrency/Atomicity:** 9 tests
 - **Retry Operations:** 6 tests
 - **State Protection:** 3 tests
 - **Terminal States:** 4 tests
 - **Additional Operations:** 2 tests
-- **Total:** 29 tests, all cloud-ready
+- **RLS & Security Validation:** 3 tests (NEW)
+- **Total:** 32 tests (29 core + 3 RLS/security), all cloud-ready
 - **Status:** Pending .env.test credentials (will pass once configured)
 
 ### 5. Safety Guards (8 Guards, Fail-Closed)
@@ -140,7 +141,7 @@ source .env.test
 npm run test:integration:db
 ```
 
-**Expected:** ✓ 29 tests pass
+**Expected:** ✓ 32 tests pass (29 core + 3 RLS/security)
 
 **See:** DEVELOPMENT_SETUP.md Part 3
 
@@ -232,7 +233,7 @@ Total Test Files: 6
 ├── lib/state/transitions.test.ts  ✓ X tests
 ├── services/mock-pinterest.test.ts ✓ X tests
 ├── tests/orchestration.test.ts    ✓ X tests
-└── tests/integration.database.test.ts
+└── tests/integration.database.test.ts (32 tests)
    ├─ Schema Validation (4 tests)
    ├─ Concurrency (4 tests)
    ├─ Atomicity (5 tests)
@@ -240,11 +241,11 @@ Total Test Files: 6
    ├─ State Protection (3 tests)
    ├─ Terminal States (4 tests)
    ├─ Additional Ops (2 tests)
-   └─ RLS Validation (implicit in all)
+   └─ RLS & Security Validation (3 tests)
 
 Result: 83 unit/mock tests PASS ✓
-Result: 29 integration tests PENDING (need .env.test)
-Expected after setup: 112 tests PASS ✓
+Result: 32 integration tests IMPLEMENTED (pending Supabase dev project + .env.test configuration)
+Expected after setup: 115 tests PASS ✓ (32 cloud tests will execute and pass)
 ```
 
 ### Validation Suite (All Pass)
@@ -350,7 +351,7 @@ Once all tests pass, Phase 3 will add:
 - End-to-end testing
 
 ### Phase 3 Readiness Checklist
-- [x] Database RPC functions proven (29 tests pass)
+- [x] Database RPC functions implemented (29 tests ready to verify)
 - [x] GitHub repository ready for collaboration
 - [x] Development/production separation designed
 - [x] Test infrastructure working
