@@ -168,14 +168,13 @@
 ### Version & Endpoints
 - Current: Pinterest REST API v5 (supported)
 - Pin creation: POST /v5/pins (create single pin)
-- Board retrieval: GET /v5/user_profile/boards (list user boards)
+- Board retrieval: GET /v5/user_account/boards (list user boards)
 - Pin lookup: GET /v5/pins/{pin_id} (retrieve pin details)
 
 ### OAuth & Token Management
-- OAuth scopes required:
-  - `pins:read` (read pins and boards)
-  - `pins:write` (create pins)
+- OAuth scopes required (Phase 3 minimum):
   - `boards:read` (read board information)
+  - `pins:write` (create pins)
   
 - Access token: 30-day expiration (must refresh before expiration)
 - Refresh token: 60-day rolling window (extends on each successful refresh)
@@ -307,7 +306,7 @@ However, the following non-blocking improvements are recommended:
 │  │ Services/pinterest.ts                                      │  │
 │  │ - OAuth token management (with refresh)                    │  │
 │  │ - Create pins: POST /v5/pins                               │  │
-│  │ - Get user boards: GET /v5/user_profile/boards             │  │
+│  │ - Get user boards: GET /v5/user_account/boards             │  │
 │  │ - Media validation (format, size)                          │  │
 │  │ - Rate limit tracking (100/minute)                         │  │
 │  │ - Error handling (distinguish transient vs fatal)          │  │
@@ -620,7 +619,7 @@ BOARD VALIDATION
 ──────────────────────────────────────────────
 
 At run start:
-  1. Fetch Pinterest boards: GET /v5/user_profile/boards
+  1. Fetch Pinterest boards: GET /v5/user_account/boards
   2. For each configured board_id:
      ├─ Verify board exists in user's profile
      ├─ If not found: log warning, mark board as invalid
@@ -1891,8 +1890,8 @@ Vercel deployment tracking:
 ### 2. Pinterest API Client Implementation (lib/services/pinterest.ts)
 - Replace mock-pinterest.ts with real implementation
 - Create pins: POST /v5/pins
-- Get user boards: GET /v5/user_profile/boards
-- Token refresh: POST /oauth/token/refresh
+- Get user boards: GET /v5/user_account/boards
+- Token refresh: POST https://api.pinterest.com/v5/oauth/token with grant_type=refresh_token
 - Error categorization (transient vs fatal)
 - Rate limit tracking
 - Requires: PINTEREST_APP_ID, PINTEREST_APP_SECRET (user provides), API docs verification
@@ -2333,14 +2332,11 @@ Vercel deployment tracking:
       ├─ ("The Beach Home", "board_id_001", "Sri Lanka Villas", true)
       ├─ ("Colombo Heritage", "board_id_002", "Sri Lanka City Stays", true)
       └─ ("Gampaha Villa", "board_id_003", "Luxury Villas", true)
-   
-   b. Option B (Simple): Set environment variable
-      BOARD_ROUTING_CONFIG='{"The Beach Home":"board_id_001","Colombo Heritage":"board_id_002"}'
    ```
 
 3. Verify Boards Accessible
    ```bash
-   curl -X GET https://api.pinterest.com/v5/user_profile/boards \
+   curl -X GET https://api.pinterest.com/v5/user_account/boards \
      -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
    
    # Response should list your boards including the ones configured above
@@ -2458,7 +2454,7 @@ Vercel deployment tracking:
 3. **Pinterest API Client** (1-2 hours)
    - Replace mock-pinterest.ts
    - Create pins (POST /v5/pins)
-   - Retrieve boards (GET /v5/user_profile/boards)
+   - Retrieve boards (GET /v5/user_account/boards)
    - Token refresh logic
 
 4. **Content Adaptation** (1 hour)

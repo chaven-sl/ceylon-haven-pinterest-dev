@@ -838,4 +838,618 @@ describe('Supabase API Integration Tests (Local HTTP API)', () => {
       await client.from('facebook_posts').delete().eq('facebook_post_id', postId);
     });
   });
+
+  /**
+   * ========================================================================
+   * PHASE 3 INTEGRATION TESTS: Pinterest OAuth Tokens & Board Routing
+   * ========================================================================
+   *
+   * Tests for new tables introduced in migration 0003
+   */
+
+  describe('Phase 3: Pinterest OAuth Tokens Table', () => {
+    /**
+     * Helper: Insert test token record
+     */
+    async function insertTestToken() {
+      const now = new Date().toISOString();
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      const { data, error } = await client.from('pinterest_oauth_tokens').insert({
+        id: 1, // Singleton
+        access_token_encrypted: 'test_access_token_encrypted_fake_data',
+        refresh_token_encrypted: 'test_refresh_token_encrypted_fake_data',
+        access_token_expires_at: futureDate,
+        refresh_token_expires_at: futureDate,
+        created_at: now,
+        updated_at: now,
+        refresh_count: 0,
+      });
+
+      if (error) {
+        throw new Error(`Failed to insert test token: ${error.message}`);
+      }
+      return data;
+    }
+
+    /**
+     * Helper: Clean up token
+     */
+    async function cleanupTokens() {
+      await client.from('pinterest_oauth_tokens').delete().eq('id', 1);
+    }
+
+    it('1. pinterest_oauth_tokens table should exist', async () => {
+      const { error } = await client
+        .from('pinterest_oauth_tokens')
+        .select('id')
+        .limit(0);
+
+      expect(error).toBeNull();
+    });
+
+    it('2. anon client cannot SELECT from pinterest_oauth_tokens (RLS denies)', async () => {
+      const { error } = await anonClient
+        .from('pinterest_oauth_tokens')
+        .select('*')
+        .limit(1);
+
+      // Should fail due to RLS policy (deny_all)
+      expect(error).not.toBeNull();
+      expect(error?.message.toLowerCase()).toContain('policy');
+    });
+
+    it('3. anon client cannot INSERT into pinterest_oauth_tokens (RLS denies)', async () => {
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      const { error } = await anonClient.from('pinterest_oauth_tokens').insert({
+        id: 999,
+        access_token_encrypted: 'fake',
+        refresh_token_encrypted: 'fake',
+        access_token_expires_at: futureDate,
+        refresh_token_expires_at: futureDate,
+      });
+
+      expect(error).not.toBeNull();
+      expect(error?.message.toLowerCase()).toContain('policy');
+    });
+
+    it('4. anon client cannot UPDATE pinterest_oauth_tokens (RLS denies)', async () => {
+      const { error } = await anonClient
+        .from('pinterest_oauth_tokens')
+        .update({ refresh_count: 5 })
+        .eq('id', 1);
+
+      expect(error).not.toBeNull();
+      expect(error?.message.toLowerCase()).toContain('policy');
+    });
+
+    it('5. service role CAN INSERT token record', async () => {
+      const now = new Date().toISOString();
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      const { error, data } = await client.from('pinterest_oauth_tokens').insert({
+        id: 1,
+        access_token_encrypted: 'test_encrypted_token_12345',
+        refresh_token_encrypted: 'test_encrypted_refresh_12345',
+        access_token_expires_at: futureDate,
+        refresh_token_expires_at: futureDate,
+        created_at: now,
+        updated_at: now,
+        refresh_count: 0,
+      });
+
+      expect(error).toBeNull();
+      expect(data).not.toBeNull();
+
+      await cleanupTokens();
+    });
+
+    it('6. service role CAN SELECT token record', async () => {
+      await insertTestToken();
+
+      const { error, data } = await client
+        .from('pinterest_oauth_tokens')
+        .select('*')
+        .eq('id', 1)
+        .single();
+
+      expect(error).toBeNull();
+      expect(data).not.toBeNull();
+      expect(data?.id).toBe(1);
+
+      await cleanupTokens();
+    });
+
+    it('7. service role CAN UPDATE token record', async () => {
+      await insertTestToken();
+
+      const { error } = await client
+        .from('pinterest_oauth_tokens')
+        .update({ refresh_count: 5 })
+        .eq('id', 1);
+
+      expect(error).toBeNull();
+
+      // Verify update
+      const { data } = await client
+        .from('pinterest_oauth_tokens')
+        .select('refresh_count')
+        .eq('id', 1)
+        .single();
+
+      expect(data?.refresh_count).toBe(5);
+
+      await cleanupTokens();
+    });
+
+    it('8. singleton constraint enforced (id=1)', async () => {
+      await insertTestToken();
+
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      // Try to insert second record with id=2 (should fail)
+      const { error } = await client.from('pinterest_oauth_tokens').insert({
+        id: 2,
+        access_token_encrypted: 'fake',
+        refresh_token_encrypted: 'fake',
+        access_token_expires_at: futureDate,
+        refresh_token_expires_at: futureDate,
+      });
+
+      // Should fail (only id=1 allowed by CHECK constraint)
+      expect(error).not.toBeNull();
+
+      await cleanupTokens();
+    });
+
+    it('9. encrypted token values persist without decryption', async () => {
+      const encryptedValue = 'encrypted_fake_token_abc123xyz';
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      const now = new Date().toISOString();
+      await client.from('pinterest_oauth_tokens').insert({
+        id: 1,
+        access_token_encrypted: encryptedValue,
+        refresh_token_encrypted: 'encrypted_refresh_xyz',
+        access_token_expires_at: futureDate,
+        refresh_token_expires_at: futureDate,
+        created_at: now,
+        updated_at: now,
+      });
+
+      const { data } = await client
+        .from('pinterest_oauth_tokens')
+        .select('access_token_encrypted')
+        .eq('id', 1)
+        .single();
+
+      // Value stored as-is (encryption/decryption happens in application code)
+      expect(data?.access_token_encrypted).toBe(encryptedValue);
+
+      await cleanupTokens();
+    });
+
+    it('10. token replacement update is atomic', async () => {
+      const now = new Date().toISOString();
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      // Insert initial token
+      await client.from('pinterest_oauth_tokens').insert({
+        id: 1,
+        access_token_encrypted: 'old_token',
+        refresh_token_encrypted: 'old_refresh',
+        access_token_expires_at: futureDate,
+        refresh_token_expires_at: futureDate,
+        created_at: now,
+        updated_at: now,
+        refresh_count: 0,
+      });
+
+      // Update (simulate token refresh)
+      const newFutureDate = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+      const { error } = await client
+        .from('pinterest_oauth_tokens')
+        .update({
+          access_token_encrypted: 'new_token_after_refresh',
+          refresh_token_encrypted: 'new_refresh_after_refresh',
+          access_token_expires_at: newFutureDate,
+          updated_at: new Date().toISOString(),
+          refresh_count: 1,
+        })
+        .eq('id', 1);
+
+      expect(error).toBeNull();
+
+      // Verify all fields updated together
+      const { data } = await client
+        .from('pinterest_oauth_tokens')
+        .select('*')
+        .eq('id', 1)
+        .single();
+
+      expect(data?.access_token_encrypted).toBe('new_token_after_refresh');
+      expect(data?.refresh_token_encrypted).toBe('new_refresh_after_refresh');
+      expect(data?.refresh_count).toBe(1);
+
+      await cleanupTokens();
+    });
+
+    it('11. expiry timestamps persist correctly', async () => {
+      const now = new Date().toISOString();
+      const accessExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const refreshExpiry = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // 60 days
+
+      await client.from('pinterest_oauth_tokens').insert({
+        id: 1,
+        access_token_encrypted: 'test',
+        refresh_token_encrypted: 'test',
+        access_token_expires_at: accessExpiry.toISOString(),
+        refresh_token_expires_at: refreshExpiry.toISOString(),
+        created_at: now,
+        updated_at: now,
+      });
+
+      const { data } = await client
+        .from('pinterest_oauth_tokens')
+        .select('access_token_expires_at, refresh_token_expires_at')
+        .eq('id', 1)
+        .single();
+
+      expect(data?.access_token_expires_at).toBeDefined();
+      expect(data?.refresh_token_expires_at).toBeDefined();
+
+      const storedAccessExpiry = new Date(data!.access_token_expires_at).getTime();
+      const storedRefreshExpiry = new Date(data!.refresh_token_expires_at).getTime();
+
+      expect(storedAccessExpiry).toBeGreaterThan(Date.now());
+      expect(storedRefreshExpiry).toBeGreaterThan(storedAccessExpiry);
+
+      await cleanupTokens();
+    });
+
+    it('12. refresh_count increments correctly', async () => {
+      const now = new Date().toISOString();
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      // Insert with count=0
+      await client.from('pinterest_oauth_tokens').insert({
+        id: 1,
+        access_token_encrypted: 'test',
+        refresh_token_encrypted: 'test',
+        access_token_expires_at: futureDate,
+        refresh_token_expires_at: futureDate,
+        created_at: now,
+        updated_at: now,
+        refresh_count: 0,
+      });
+
+      // Simulate multiple refreshes
+      for (let i = 1; i <= 5; i++) {
+        await client
+          .from('pinterest_oauth_tokens')
+          .update({ refresh_count: i, updated_at: new Date().toISOString() })
+          .eq('id', 1);
+      }
+
+      const { data } = await client
+        .from('pinterest_oauth_tokens')
+        .select('refresh_count')
+        .eq('id', 1)
+        .single();
+
+      expect(data?.refresh_count).toBe(5);
+
+      await cleanupTokens();
+    });
+  });
+
+  describe('Phase 3: Board Routing Config Table', () => {
+    /**
+     * Helper: Insert test routing config
+     */
+    async function insertTestRouting(propertyId: string = `test_prop_${Date.now()}`) {
+      const now = new Date().toISOString();
+
+      const { data, error } = await client.from('board_routing_config').insert({
+        property_id: propertyId,
+        property_name: 'Test Property',
+        property_type: 'villa',
+        pinterest_board_id: 'test_board_001',
+        pinterest_board_name: 'Test Stays',
+        destination_url: 'https://ceylonhaven.com/test-property',
+        aliases: ['test alias 1', 'test alias 2'],
+        active: true,
+        created_at: now,
+        updated_at: now,
+      });
+
+      if (error) {
+        throw new Error(`Failed to insert routing: ${error.message}`);
+      }
+      return data;
+    }
+
+    /**
+     * Helper: Clean up routing records
+     */
+    async function cleanupRouting(propertyId: string) {
+      await client.from('board_routing_config').delete().eq('property_id', propertyId);
+    }
+
+    it('1. board_routing_config table should exist', async () => {
+      const { error } = await client
+        .from('board_routing_config')
+        .select('id')
+        .limit(0);
+
+      expect(error).toBeNull();
+    });
+
+    it('2. anon client cannot SELECT from board_routing_config (RLS denies)', async () => {
+      const { error } = await anonClient
+        .from('board_routing_config')
+        .select('*')
+        .limit(1);
+
+      expect(error).not.toBeNull();
+      expect(error?.message.toLowerCase()).toContain('policy');
+    });
+
+    it('3. anon client cannot INSERT into board_routing_config (RLS denies)', async () => {
+      const { error } = await anonClient.from('board_routing_config').insert({
+        property_id: 'test',
+        property_name: 'Test',
+        pinterest_board_id: 'board1',
+      });
+
+      expect(error).not.toBeNull();
+    });
+
+    it('4. service role can INSERT routing config', async () => {
+      const propertyId = `test_insert_${Date.now()}`;
+      const now = new Date().toISOString();
+
+      const { error } = await client.from('board_routing_config').insert({
+        property_id: propertyId,
+        property_name: 'Test Property',
+        property_type: 'villa',
+        pinterest_board_id: 'board_001',
+        pinterest_board_name: 'Villas',
+        destination_url: 'https://example.com',
+        created_at: now,
+        updated_at: now,
+      });
+
+      expect(error).toBeNull();
+
+      await cleanupRouting(propertyId);
+    });
+
+    it('5. service role can SELECT routing config', async () => {
+      const propertyId = `test_select_${Date.now()}`;
+      await insertTestRouting(propertyId);
+
+      const { error, data } = await client
+        .from('board_routing_config')
+        .select('*')
+        .eq('property_id', propertyId)
+        .single();
+
+      expect(error).toBeNull();
+      expect(data?.property_id).toBe(propertyId);
+
+      await cleanupRouting(propertyId);
+    });
+
+    it('6. service role can UPDATE routing config', async () => {
+      const propertyId = `test_update_${Date.now()}`;
+      await insertTestRouting(propertyId);
+
+      const { error } = await client
+        .from('board_routing_config')
+        .update({ active: false })
+        .eq('property_id', propertyId);
+
+      expect(error).toBeNull();
+
+      const { data } = await client
+        .from('board_routing_config')
+        .select('active')
+        .eq('property_id', propertyId)
+        .single();
+
+      expect(data?.active).toBe(false);
+
+      await cleanupRouting(propertyId);
+    });
+
+    it('7. property_id UNIQUE constraint enforced', async () => {
+      const propertyId = `test_unique_${Date.now()}`;
+
+      // Insert first record
+      await insertTestRouting(propertyId);
+
+      // Try to insert duplicate
+      const now = new Date().toISOString();
+      const { error } = await client.from('board_routing_config').insert({
+        property_id: propertyId,
+        property_name: 'Duplicate',
+        property_type: 'villa',
+        pinterest_board_id: 'board_002',
+        created_at: now,
+        updated_at: now,
+      });
+
+      // Should fail (UNIQUE constraint)
+      expect(error).not.toBeNull();
+      expect(error?.code).toBe('23505'); // UNIQUE constraint violation
+
+      await cleanupRouting(propertyId);
+    });
+
+    it('8. active BOOLEAN filter works correctly', async () => {
+      const propertyId1 = `test_active_1_${Date.now()}`;
+      const propertyId2 = `test_active_2_${Date.now()}`;
+      const now = new Date().toISOString();
+
+      // Insert active record
+      await client.from('board_routing_config').insert({
+        property_id: propertyId1,
+        property_name: 'Active Property',
+        property_type: 'villa',
+        pinterest_board_id: 'board_1',
+        active: true,
+        created_at: now,
+        updated_at: now,
+      });
+
+      // Insert inactive record
+      await client.from('board_routing_config').insert({
+        property_id: propertyId2,
+        property_name: 'Inactive Property',
+        property_type: 'villa',
+        pinterest_board_id: 'board_2',
+        active: false,
+        created_at: now,
+        updated_at: now,
+      });
+
+      // Query only active records
+      const { data: activeRecords } = await client
+        .from('board_routing_config')
+        .select('property_id')
+        .eq('active', true);
+
+      expect(activeRecords).toBeDefined();
+      expect(activeRecords?.some(r => r.property_id === propertyId1)).toBe(true);
+      expect(activeRecords?.some(r => r.property_id === propertyId2)).toBe(false);
+
+      await cleanupRouting(propertyId1);
+      await cleanupRouting(propertyId2);
+    });
+
+    it('9. aliases array field persists correctly', async () => {
+      const propertyId = `test_aliases_${Date.now()}`;
+      const aliases = ['Beach Villa', 'Galle Beachfront', 'South Coast Estate'];
+
+      const now = new Date().toISOString();
+      await client.from('board_routing_config').insert({
+        property_id: propertyId,
+        property_name: 'Beachfront Villa',
+        property_type: 'villa',
+        pinterest_board_id: 'beachvillas',
+        aliases,
+        created_at: now,
+        updated_at: now,
+      });
+
+      const { data } = await client
+        .from('board_routing_config')
+        .select('aliases')
+        .eq('property_id', propertyId)
+        .single();
+
+      expect(data?.aliases).toEqual(aliases);
+
+      await cleanupRouting(propertyId);
+    });
+
+    it('10. destination_url persists correctly', async () => {
+      const propertyId = `test_url_${Date.now()}`;
+      const url = 'https://ceylonhaven.com/properties/beachfront-villa-galle';
+
+      const now = new Date().toISOString();
+      await client.from('board_routing_config').insert({
+        property_id: propertyId,
+        property_name: 'Test',
+        property_type: 'villa',
+        pinterest_board_id: 'board',
+        destination_url: url,
+        created_at: now,
+        updated_at: now,
+      });
+
+      const { data } = await client
+        .from('board_routing_config')
+        .select('destination_url')
+        .eq('property_id', propertyId)
+        .single();
+
+      expect(data?.destination_url).toBe(url);
+
+      await cleanupRouting(propertyId);
+    });
+
+    it('11. created_at and updated_at timestamps work correctly', async () => {
+      const propertyId = `test_timestamps_${Date.now()}`;
+
+      const beforeInsert = new Date();
+      const now = new Date().toISOString();
+
+      await client.from('board_routing_config').insert({
+        property_id: propertyId,
+        property_name: 'Test',
+        property_type: 'villa',
+        pinterest_board_id: 'board',
+        created_at: now,
+        updated_at: now,
+      });
+
+      const { data } = await client
+        .from('board_routing_config')
+        .select('created_at, updated_at')
+        .eq('property_id', propertyId)
+        .single();
+
+      const createdAt = new Date(data!.created_at);
+      const updatedAt = new Date(data!.updated_at);
+
+      expect(createdAt.getTime()).toBeGreaterThanOrEqual(beforeInsert.getTime() - 1000);
+      expect(updatedAt.getTime()).toBeGreaterThanOrEqual(beforeInsert.getTime() - 1000);
+
+      await cleanupRouting(propertyId);
+    });
+
+    it('12. inactive records excluded from active queries', async () => {
+      const propertyId1 = `test_inactive_1_${Date.now()}`;
+      const propertyId2 = `test_inactive_2_${Date.now()}`;
+      const now = new Date().toISOString();
+
+      // Insert one active and one inactive
+      await client.from('board_routing_config').insert([
+        {
+          property_id: propertyId1,
+          property_name: 'Active',
+          property_type: 'villa',
+          pinterest_board_id: 'board1',
+          active: true,
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          property_id: propertyId2,
+          property_name: 'Archived',
+          property_type: 'villa',
+          pinterest_board_id: 'board2',
+          active: false,
+          created_at: now,
+          updated_at: now,
+        },
+      ]);
+
+      // Query active only
+      const { data } = await client
+        .from('board_routing_config')
+        .select('*')
+        .eq('active', true);
+
+      const activeCount = data?.filter(r => r.property_id === propertyId1 || r.property_id === propertyId2).length;
+
+      expect(activeCount).toBe(1);
+
+      await cleanupRouting(propertyId1);
+      await cleanupRouting(propertyId2);
+    });
+  });
 });

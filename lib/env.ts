@@ -9,13 +9,16 @@ const EnvSchema = z.object({
   CRON_SECRET: z.string().min(32, 'CRON_SECRET must be at least 32 characters'),
   FB_GRAPH_API_VERSION: z.string().default('v20'),
 
-  // Optional environment variables for future use
-  FACEBOOK_PAGE_ID: z.string().optional(),
+  // Phase 3: Facebook Integration (Optional in dev, required in production)
+  FACEBOOK_PAGE_ID: z.string().min(1, 'FACEBOOK_PAGE_ID must be non-empty').optional(),
   FACEBOOK_ACCESS_TOKEN: z.string().optional(),
+
+  // Phase 3: Pinterest OAuth (Optional in dev, required in production)
   PINTEREST_APP_ID: z.string().optional(),
   PINTEREST_APP_SECRET: z.string().optional(),
-  PINTEREST_ACCESS_TOKEN: z.string().optional(),
-  PINTEREST_REFRESH_TOKEN: z.string().optional(),
+
+  // Phase 3: Token Encryption (Required for production Pinterest token storage)
+  TOKEN_ENCRYPTION_KEY: z.string().optional(),
 
   // Node environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
