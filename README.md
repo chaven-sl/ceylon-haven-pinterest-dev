@@ -2,15 +2,20 @@
 
 Automatic social media distribution: republish Ceylon Haven Facebook posts to Pinterest with zero manual intervention.
 
-**Status:** ✅ Phase 3 Part 1 Complete — DEPLOYED TO PRODUCTION  
-**Latest Update:** Successfully deployed to Vercel (2026-09-05)  
-**GitHub Repo:** https://github.com/chaven-sl/ceylon-haven-pinterest-dev (public)  
-**Vercel Project:** ceylon-haven-pinterest-dev (Ready Latest)  
-**Deployment:** Commit cb7e9d6 with correct authorship (Dilshan Rabbie)  
+**Status:** ⚠️ Phase 3 Part 1 Code Ready — Vercel Deployment Issue Identified  
+**Latest Update:** Health endpoint diagnosis complete (2026-09-05)  
+**GitHub Repo:** https://github.com/chaven-sl/ceylon-haven-pinterest-dev (public, fd82313 latest)  
+**Vercel Project:** ceylon-haven-pinterest-dev (Routes return 404)  
+**Issue:** Code is correct, routes build properly, but Vercel config needs review  
 **Test Results:** 66/66 valid tests passing (Phase 2.4: 48, Phase 3 corrected: 7, Orchestration: 11)  
-**Build Status:** ✅ SUCCESS (Next.js build output .next deployed)  
-**Cron Schedule:** 06:30 UTC daily (12:00 PM Asia/Colombo)  
-**Next Step:** Add Pinterest App ID & Secret to Vercel environment variables
+**Local Health Check:** ✅ `/api/health` works (HTTP 200) when run locally  
+**Production Health Check:** ❌ `/api/health` returns 404 (Vercel deployment issue)  
+**Next Steps:** 
+  1. Review Vercel build settings (root directory, build command, output directory)
+  2. Check build logs for errors
+  3. Trigger fresh redeployment
+  4. Verify health endpoint works in production
+  5. See: HEALTH_ENDPOINT_DIAGNOSIS.md for detailed investigation
 
 ---
 
