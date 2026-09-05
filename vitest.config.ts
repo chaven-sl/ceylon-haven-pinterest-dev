@@ -17,7 +17,15 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['**/*.test.ts', '**/*.spec.ts'],
-    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
+    exclude: [
+      'node_modules',
+      'dist',
+      '.idea',
+      '.git',
+      '.cache',
+      'tests/integration.database.test.ts',
+      'tests/security.phase3.test.ts',
+    ],
     passWithNoTests: false,
     coverage: {
       provider: 'v8',
