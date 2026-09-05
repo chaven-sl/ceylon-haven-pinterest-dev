@@ -74,7 +74,46 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Initialize services
+    // ========================================================================
+    // FAIL-CLOSED GUARD: Validate Pinterest readiness BEFORE any side effects
+    // ========================================================================
+    // This guard must run before Facebook API calls, Supabase queries/mutations,
+    // or any other external operations to ensure fail-closed semantics.
+    let pinterestAccessToken: string | null = null;
+    try {
+      const tokenManager = createPinterestTokenManager();
+      pinterestAccessToken = await tokenManager.getValidAccessToken();
+
+      if (!pinterestAccessToken) {
+        return NextResponse.json(
+          {
+            error: 'Service Unavailable',
+            message: 'Pinterest token not configured. Manual setup required.',
+            executionId,
+            phase: 'Phase 3 Part 1',
+            sideEffects: 'none',
+          },
+          { status: 503 },
+        );
+      }
+    } catch (error) {
+      // Token manager failed; Pinterest integration not ready
+      const tokenError = error instanceof Error ? error.message : String(error);
+      console.error('[cron/fail-closed-guard] Pinterest token unavailable:', tokenError);
+      return NextResponse.json(
+        {
+          error: 'Service Unavailable',
+          message: 'Pinterest token retrieval failed. Manual re-authentication required.',
+          reason: tokenError,
+          executionId,
+          phase: 'Phase 3 Part 1',
+          sideEffects: 'none',
+        },
+        { status: 503 },
+      );
+    }
+
+    // Initialize services (only after Pinterest readiness confirmed)
     const supabase = getSupabaseAdmin();
     const boardRouter = createBoardRouter();
     const contentAdapter = createContentAdapter();
@@ -167,27 +206,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // ========================================================================
     // PHASE 2: PINTEREST PUBLISHING - Process discovered posts
     // ========================================================================
-
-    // Pinterest client requires valid token from Supabase (or will fail gracefully)
-    let pinterestClient: PinterestClient | null = null;
-    let pinterestAccessToken: string | null = null;
-
-    // Get Pinterest token via token manager (handles refresh if needed)
-    try {
-      const tokenManager = createPinterestTokenManager();
-
-      // getValidAccessToken() checks expiry and refreshes if needed
-      pinterestAccessToken = await tokenManager.getValidAccessToken();
-
-      if (pinterestAccessToken) {
-        pinterestClient = new PinterestClient(pinterestAccessToken);
-      }
-    } catch (error) {
-      // Token not available or refresh failed; will skip Pinterest operations
-      const tokenError = error instanceof Error ? error.message : String(error);
-      console.error('[cron/token-manager] Failed to get valid Pinterest token:', tokenError);
-      console.warn('[cron] Pinterest operations will be skipped in this run');
-    }
+    // Pinterest token is guaranteed to be valid here (verified by fail-closed guard above)
+    const pinterestClient = new PinterestClient(pinterestAccessToken);
 
     // Fetch posts in 'discovered' state
     const { data: discoveredPosts, error: fetchError } = (await supabase
@@ -258,22 +278,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             facebookPostId,
             status: 'skipped',
             reason: routeResult.reason,
-          });
-          continue;
-        }
-
-        // Skip if no Pinterest client available (missing token)
-        if (!pinterestClient || !pinterestAccessToken) {
-          await markPostSkipped(
-            supabase,
-            facebookPostId,
-            'Pinterest token not configured. Manual setup required.',
-          );
-          results.skipped++;
-          results.details.push({
-            facebookPostId,
-            status: 'skipped',
-            reason: 'Pinterest credentials not available',
           });
           continue;
         }
